@@ -1,0 +1,7 @@
+../Core/Src/Voltage_Current.c:15:6:VoltCurrent_Init	1
+../Core/Src/Voltage_Current.c:19:6:ADC_Select_Voltage	2
+../Core/Src/Voltage_Current.c:30:6:ADC_Select_Current	2
+../Core/Src/Voltage_Current.c:40:6:Get_Voltage_Measurement	1
+../Core/Src/Voltage_Current.c:52:6:Get_Current_Measurement	1
+../Core/Src/Voltage_Current.c:64:6:VoltCurrent_Init_DMA	1
+../Core/Src/Voltage_Current.c:69:6:VoltCurrent_Callback	1

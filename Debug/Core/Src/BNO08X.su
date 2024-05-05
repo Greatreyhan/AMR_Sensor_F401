@@ -1,0 +1,2 @@
+../Core/Src/BNO08X.c:12:6:BNO08X_GetData	24	static
+../Core/Src/BNO08X.c:31:6:BNO08X_Init	16	static
