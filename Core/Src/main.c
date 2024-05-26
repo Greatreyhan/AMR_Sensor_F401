@@ -25,11 +25,12 @@
 #include 	"DHT22.h"
 #include 	"Voltage_Current.h"
 #include 	"HX711.h"
+#include 	"MAX6675.h"
 #include 	<stdint.h>
 #include 	<string.h>
 #include 	<stdio.h>
 
-#include "communication_full.h"
+#include 	"communication_full.h"
 #include	"fonts.h"
 #include 	"tft.h"
 #include	"functions.h"
@@ -37,12 +38,12 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-//#define		USE_BNO08X
-#define		USE_DHT22
+#define		USE_BNO08X
+//#define		USE_DHT22
 #define		USE_VOLT_CURRENT
 //#define		USE_LOADCELL
-//#define		USE_COM_CONTROL
-//#define		USE_COM_PC
+#define		USE_COM_CONTROL
+#define		USE_COM_PC
 //#define		USE_LCD
 /* USER CODE END PTD */
 
@@ -78,6 +79,8 @@ com_pc_get_t message_from_pc;
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
+extern SPI_HandleTypeDef hspi1;
+
 TIM_HandleTypeDef htim1;
 
 UART_HandleTypeDef huart1;
@@ -109,6 +112,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART6_UART_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -118,30 +122,30 @@ static void MX_TIM1_Init(void);
 
 ////////////////////////////////////// COMMUNICATION CALLBACK ////////////////////////////////////
 
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
-//	if (huart == &huart2) {
-//
-//		// Callback for BNO08X Data
-//		#ifdef USE_BNO08X
-//	    BNO08X_GetData(&BNO08x_Data);
-//    	#endif
-//
-//	} else if (huart == &huart1) {
-//
-//	    // Callback for Communicate to PC
-//		#ifdef USE_COM_PC
-//		rx_pc_get(&message_from_pc);
-//		#endif
-//
-//	} else if(huart == &huart6){
-//
-//		// Callback Receive data from STM32 Control
-//		#ifdef USE_COM_CONTROL
-//		rx_ctrl_feedback(&feedback_control);
-//		#endif
-//	}
-//}
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart == &huart2) {
+
+		// Callback for BNO08X Data
+		#ifdef USE_BNO08X
+	    BNO08X_GetData(&BNO08x_Data);
+    	#endif
+
+	} else if (huart == &huart1) {
+
+	    // Callback for Communicate to PC
+		#ifdef USE_COM_PC
+		rx_pc_get(&message_from_pc);
+		#endif
+
+	} else if(huart == &huart6){
+
+		// Callback Receive data from STM32 Control
+		#ifdef USE_COM_CONTROL
+		rx_ctrl_feedback(&feedback_control);
+		#endif
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -179,6 +183,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART6_UART_Init();
   MX_TIM1_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   ////////////////////////////////////// SENSOR INITIALIZATION ////////////////////////////////////
 
@@ -233,17 +238,20 @@ int main(void)
 	  ////////////////////////////////////// SENSOR READING ////////////////////////////////////
 
 	  // Reading Data in DHT22 Sensor
-	  DHT_GetData(&DHT22_Data);
-	  Sensor_Data.temperature = DHT22_Data.Temperature;
-	  Sensor_Data.humidity = DHT22_Data.Humidity;
+//	  DHT_GetData(&DHT22_Data);
+//	  Sensor_Data.temperature = DHT22_Data.Temperature;
+//	  Sensor_Data.humidity = DHT22_Data.Humidity;
+
+	  // Reading Data in MX7655 Sensor
+	  Sensor_Data.temperature = (Max6675_Read_Temp()*100);
 
 	  // Reading Data in Voltage Sensor
-//	  Get_Voltage_Measurement(&Volt_Current_Data);
-//	  Sensor_Data.voltage = Volt_Current_Data.voltage;
+	  Get_Voltage_Measurement(&Volt_Current_Data);
+	  Sensor_Data.voltage = (Volt_Current_Data.voltage*100);
 
 	  // Reading Data in Current Sensor
-//	  Get_Current_Measurement(&Volt_Current_Data);
-//	  Sensor_Data.current = Volt_Current_Data.current;
+	  Get_Current_Measurement(&Volt_Current_Data);
+	  Sensor_Data.current = (Volt_Current_Data.current*100);
 
 	  // Reading Data in Load cell Sensor
 //	  Sensor_Data.loadcell = hx711_measure_weight(Loadcell_Data);
@@ -251,15 +259,15 @@ int main(void)
 	  ////////////////////////////////////// SENDING DATA TO PC ////////////////////////////////
 
 	  // Sending BNO08X Data
-//	  tx_pc_send_BNO08X(BNO08x_Data);
+	  tx_pc_send_BNO08X(BNO08x_Data);
 
 	  // Sending Sensor Data
-//	  tx_pc_send_Sensor(Sensor_Data);
+	  tx_pc_send_Sensor(Sensor_Data);
 
 	  ////////////////////////////////////// SENDING DATA TO CONTROL ///////////////////////////
 
 	  // Sending BNO08X Data
-//	  tx_ctrl_send_BNO08X(BNO08x_Data);
+	  tx_ctrl_send_BNO08X(BNO08x_Data);
 
     /* USER CODE END WHILE */
 
@@ -350,9 +358,9 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-//
-//  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-//  */
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
 //  sConfig.Channel = ADC_CHANNEL_1;
 //  sConfig.Rank = 1;
 //  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
@@ -360,9 +368,9 @@ static void MX_ADC1_Init(void)
 //  {
 //    Error_Handler();
 //  }
-//
-//  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-//  */
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
 //  sConfig.Rank = 2;
 //  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
 //  {
@@ -371,6 +379,44 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief SPI1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI1_Init(void)
+{
+
+  /* USER CODE BEGIN SPI1_Init 0 */
+
+  /* USER CODE END SPI1_Init 0 */
+
+  /* USER CODE BEGIN SPI1_Init 1 */
+
+  /* USER CODE END SPI1_Init 1 */
+  /* SPI1 parameter configuration*/
+  hspi1.Instance = SPI1;
+  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
+  hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.NSS = SPI_NSS_SOFT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi1.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI1_Init 2 */
+
+  /* USER CODE END SPI1_Init 2 */
 
 }
 
@@ -563,9 +609,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED_BUILTIN_GPIO_Port, LED_BUILTIN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LED_BLUE_Pin|LED_GREEN_Pin|LED_RED_Pin|MUL_SCK_Pin
-                          |MUL_Latch_Pin|MUL_MOSI_Pin|LCD_CS_Pin|LCD_RS_Pin
-                          |LCD_WR_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, MX7665_Pin|LED_BLUE_Pin|LED_GREEN_Pin|LED_RED_Pin
+                          |MUL_SCK_Pin|MUL_Latch_Pin|MUL_MOSI_Pin|LCD_CS_Pin
+                          |LCD_RS_Pin|LCD_WR_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_RESET);
@@ -583,12 +629,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(DHT22_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LED_BLUE_Pin LED_GREEN_Pin LED_RED_Pin MUL_SCK_Pin
-                           MUL_Latch_Pin MUL_MOSI_Pin LCD_CS_Pin LCD_RS_Pin
-                           LCD_WR_Pin */
-  GPIO_InitStruct.Pin = LED_BLUE_Pin|LED_GREEN_Pin|LED_RED_Pin|MUL_SCK_Pin
-                          |MUL_Latch_Pin|MUL_MOSI_Pin|LCD_CS_Pin|LCD_RS_Pin
-                          |LCD_WR_Pin;
+  /*Configure GPIO pins : MX7665_Pin LED_BLUE_Pin LED_GREEN_Pin LED_RED_Pin
+                           MUL_SCK_Pin MUL_Latch_Pin MUL_MOSI_Pin LCD_CS_Pin
+                           LCD_RS_Pin LCD_WR_Pin */
+  GPIO_InitStruct.Pin = MX7665_Pin|LED_BLUE_Pin|LED_GREEN_Pin|LED_RED_Pin
+                          |MUL_SCK_Pin|MUL_Latch_Pin|MUL_MOSI_Pin|LCD_CS_Pin
+                          |LCD_RS_Pin|LCD_WR_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

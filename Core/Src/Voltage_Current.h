@@ -13,6 +13,7 @@
 typedef struct{
 	float voltage;
 	float current;
+	float rawVoltage;
 }Voltage_Current_Typedef;
 
 void VoltCurrent_Init(ADC_HandleTypeDef *hadc_config);

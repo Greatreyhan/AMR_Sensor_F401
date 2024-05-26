@@ -8,7 +8,8 @@
 #include <math.h>
 static uint32_t value[2];
 static float sensitivity = 0.1;
-static float const_voltage = 1.488;
+//static float const_voltage = 1.488;
+static float const_voltage = 1.035;
 
 ADC_HandleTypeDef hadc;
 
@@ -44,7 +45,7 @@ void Get_Voltage_Measurement(Voltage_Current_Typedef *config){
 	  HAL_ADC_Start(&hadc);
 	  HAL_ADC_PollForConversion(&hadc, 1000);
 	  value[0] = HAL_ADC_GetValue(&hadc);
-	  config->voltage = (float)value[0]/4095*16.5;
+	  config->voltage = (float)value[0]/4095*24;
 	  HAL_ADC_Stop(&hadc);
 
 }
@@ -57,6 +58,7 @@ void Get_Current_Measurement(Voltage_Current_Typedef *config){
 	  HAL_ADC_PollForConversion(&hadc, 1000);
 	  value[1] = HAL_ADC_GetValue(&hadc);
 	  float rawVoltage = (float) value[1]*3.3*2*const_voltage/4095;
+	  config->rawVoltage = rawVoltage;
 	  config->current  = (rawVoltage - 2.5)/sensitivity;
 	  HAL_ADC_Stop(&hadc);
 }

@@ -61,6 +61,8 @@ void Error_Handler(void);
 #define LED_BUILTIN_GPIO_Port GPIOC
 #define DHT22_Pin GPIO_PIN_0
 #define DHT22_GPIO_Port GPIOA
+#define MX7665_Pin GPIO_PIN_10
+#define MX7665_GPIO_Port GPIOB
 #define LED_BLUE_Pin GPIO_PIN_13
 #define LED_BLUE_GPIO_Port GPIOB
 #define LED_GREEN_Pin GPIO_PIN_14

@@ -29,11 +29,11 @@ typedef enum{
 }command_type_t;
 
 typedef struct{
-	uint16_t temperature;
-	uint16_t humidity;
-	uint16_t current;
-	uint16_t voltage;
-	uint16_t loadcell;
+	int16_t temperature;
+	int16_t humidity;
+	int16_t current;
+	int16_t voltage;
+	int16_t loadcell;
 }sensor_package_t;
 
 typedef struct{
@@ -60,12 +60,12 @@ typedef struct{
 }feedback_ctrl_t;
 
 typedef struct{
-	uint16_t x_acceleration;
-	uint16_t y_acceleration;
-	uint16_t z_acceleration;
-	uint16_t roll;
-	uint16_t pitch;
-	uint16_t yaw;
+	int16_t x_pos;
+	int16_t y_pos;
+	int16_t orientation;
+	int16_t roll;
+	int16_t pitch;
+	int16_t yaw;
 	move_direction_t direction;
 	uint8_t speed;
 	uint16_t distance;
@@ -73,12 +73,12 @@ typedef struct{
 }com_pc_get_t;
 
 typedef struct{
-	uint16_t x_acceleration;
-	uint16_t y_acceleration;
-	uint16_t z_acceleration;
-	uint16_t roll;
-	uint16_t pitch;
-	uint16_t yaw;
+	int16_t x_acceleration;
+	int16_t y_acceleration;
+	int16_t z_acceleration;
+	int16_t roll;
+	int16_t pitch;
+	int16_t yaw;
 	move_direction_t direction;
 	uint8_t speed;
 	uint16_t distance;

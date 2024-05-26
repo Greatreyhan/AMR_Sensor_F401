@@ -80,12 +80,25 @@ void rx_ctrl_get(com_ctrl_get_t* get){
 
 			// Check for Position
 			else if(rxbuf_get_ctrl[i+2] == 0x02){
-				get->yaw = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
-				get->pitch = (rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6];
-				get->roll = (rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8];
-				get->x_acceleration = (rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10];
-				get->y_acceleration = (rxbuf_get_ctrl[i+11] << 8) | rxbuf_get_ctrl[i+12];
-				get->z_acceleration = (rxbuf_get_ctrl[i+13] << 8) | rxbuf_get_ctrl[i+14];
+
+				if((rxbuf_get_ctrl[i+3] & 0x80)) get->yaw = ((rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4])-(65536);
+				else get->yaw = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
+
+				if((rxbuf_get_ctrl[i+5] & 0x80)) get->pitch = ((rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6])-(65536);
+				else get->pitch = (rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6];
+
+				if((rxbuf_get_ctrl[i+7] & 0x80)) get->roll = ((rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8])-(65536);
+				else get->roll = (rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8];
+
+				if((rxbuf_get_ctrl[i+9] & 0x80)) get->x_acceleration = ((rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10])-(65536);
+				else get->x_acceleration = (rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10];
+
+				if((rxbuf_get_ctrl[i+11] & 0x80)) get->y_acceleration = ((rxbuf_get_ctrl[i+11] << 8) | rxbuf_get_ctrl[i+12])-(65536);
+				else get->y_acceleration = (rxbuf_get_ctrl[i+11] << 8) | rxbuf_get_ctrl[i+12];
+
+				if((rxbuf_get_ctrl[i+13] & 0x80)) get->z_acceleration = ((rxbuf_get_ctrl[i+13] << 8) | rxbuf_get_ctrl[i+14])-(65536);
+				else get->z_acceleration = (rxbuf_get_ctrl[i+13] << 8) | rxbuf_get_ctrl[i+14];
+
 				uint8_t txbuf[3] = {0xA5, 0x5A, 0x02};
 				HAL_UART_Transmit(huart_ctrl, txbuf, 3, 1);
 				get->cmd = 0x02;
@@ -143,6 +156,24 @@ bool tx_pc_send_Sensor(sensor_package_t Sensor){
 	else return false;
 }
 
+//---------------------------------------------------- Send Kinematic Data -----------------------------------------------------------------------------------------//
+bool tx_pc_send_Kinematic(uint16_t Sx, uint16_t Sy, uint16_t St, uint16_t T){
+	uint8_t steady[] = {0xA5, 0x5A, 0x05, ((Sx >> 8) & 0XFF), ((Sx) & 0XFF), ((Sy >> 8) & 0XFF), ((Sy) & 0XFF), ((St >> 8) & 0XFF), ((St) & 0XFF), ((T >> 8) & 0XFF), ((T) & 0XFF), 0x00, 0x00, 0x00, 0x00, 0x00};
+	steady[15] = checksum_pc_generator(steady, 16);
+
+	if(HAL_UART_Transmit(huart_pc, steady, 16, TIMEOUT_SEND) == HAL_OK) return true;
+	else return false;
+}
+
+//---------------------------------------------------- Send DWM1000 Data -----------------------------------------------------------------------------------------//
+bool tx_pc_send_DWM(uint16_t Xpos, uint16_t YPos){
+	uint8_t steady[] = {0xA5, 0x5A, 0x06, ((Xpos >> 8) & 0XFF), ((Xpos) & 0XFF), ((YPos >> 8) & 0XFF), ((YPos) & 0XFF), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	steady[15] = checksum_pc_generator(steady, 16);
+
+	if(HAL_UART_Transmit(huart_pc, steady, 16, TIMEOUT_SEND) == HAL_OK) return true;
+	else return false;
+}
+
 void rx_pc_start(void){
 	HAL_UART_Receive_DMA(huart_pc,rxbuf_pc, 3);
 }
@@ -189,9 +220,15 @@ void rx_pc_get(com_pc_get_t* get){
 
 			// Check for "Move" Instruction Given from Jetson Nano
 			else if(rxbuf_get_pc[i+2] == 0x12){
-				get->direction = (rxbuf_get_pc[i+3]);
-				get->speed = (rxbuf_get_pc[i+4]);
-				get->distance = (rxbuf_get_pc[i+5] << 8) | rxbuf_get_pc[i+6];
+				if((rxbuf_get_ctrl[i+3] & 0x80)) get->x_pos = ((rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4])-(65536);
+				else get->x_pos = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
+
+				if((rxbuf_get_ctrl[i+5] & 0x80)) get->y_pos = ((rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6])-(65536);
+				else get->y_pos = (rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6];
+
+				if((rxbuf_get_ctrl[i+7] & 0x80)) get->orientation = ((rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8])-(65536);
+				else get->orientation = (rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8];
+
 				get->cmd = MOVE;
 
 				#ifdef	USE_FORWARDING
