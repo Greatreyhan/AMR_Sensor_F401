@@ -45,6 +45,13 @@
 #define		USE_COM_CONTROL
 #define		USE_COM_PC
 //#define		USE_LCD
+
+/////////////////////////////// INTERVAL TIME ///////////////////////////////////
+#define		TEMP_INTERVAL		1000
+#define		CURRENT_INTERVAL	1000
+#define		VOLTAGE_INTERVAL	1000
+#define		SENSOR_INTERVAL		1000
+#define		BNO08X_INTERVAL		50
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -69,6 +76,9 @@ feedback_ctrl_t feedback_control;
 
 // Typedef Communication PC
 com_pc_get_t message_from_pc;
+
+// Typedef Communication Control
+com_ctrl_get_t message_from_ctrl;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -101,6 +111,14 @@ char BufferLast[50];
 // Channel Loadcell
 float chA= 0;
 float chB = 0;
+
+// Buffer Sending Data
+uint32_t CurrentTick = 0,
+		 TempTick = 0,
+		 VoltageTick = 0,
+		 BNO08XTick = 0,
+		 LoadcellTick = 0,
+		 SensorTick = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -128,11 +146,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 		// Callback for BNO08X Data
 		#ifdef USE_BNO08X
+//		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 	    BNO08X_GetData(&BNO08x_Data);
+//	    tx_ctrl_send_BNO08X(BNO08x_Data);
     	#endif
 
 	} else if (huart == &huart1) {
-
 	    // Callback for Communicate to PC
 		#ifdef USE_COM_PC
 		rx_pc_get(&message_from_pc);
@@ -142,7 +161,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 		// Callback Receive data from STM32 Control
 		#ifdef USE_COM_CONTROL
-		rx_ctrl_feedback(&feedback_control);
+		rx_ctrl_get(&message_from_ctrl);
 		#endif
 	}
 }
@@ -210,7 +229,7 @@ int main(void)
     // Initialize Communication to Control
     #ifdef USE_COM_CONTROL
     komunikasi_ctrl_init(&huart6);
-    rx_ctrl_start();
+    rx_ctrl_start_get();
     #endif
 
     // Initialize Communication to PC
@@ -234,6 +253,41 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  ////////////////////////////////////// ASYNCHRONOUS READING & SENDING ///////////////////////////////////////////
+
+//	  CurrentTick = HAL_GetTick();
+//
+//	  if(CurrentTick-SensorTick > SENSOR_INTERVAL){
+//
+//		  // Reading Data in MX7655 Sensor
+//		  Sensor_Data.temperature = (Max6675_Read_Temp()*100);
+//
+//		  // Reading Data in Voltage Sensor
+//		  Get_Voltage_Measurement(&Volt_Current_Data);
+//		  Sensor_Data.voltage = (Volt_Current_Data.voltage*100);
+//
+//		  // Reading Data in Current Sensor
+//		  Get_Current_Measurement(&Volt_Current_Data);
+//		  Sensor_Data.current = (Volt_Current_Data.current*100);
+//
+//		  // Sending Sensor Data
+//		  tx_pc_send_Sensor(Sensor_Data);
+//
+//		  // Sending BNO08X Data
+//		  tx_pc_send_BNO08X(BNO08x_Data);
+//		  HAL_Delay(100);
+//
+//		  SensorTick = CurrentTick;
+//	  }
+
+//	  CurrentTick = HAL_GetTick();
+//	  if(CurrentTick-BNO08XTick > BNO08X_INTERVAL){
+//		  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+//
+		  // Sending BNO08X Data
+//		  tx_ctrl_send_BNO08X(BNO08x_Data);//
+//		  BNO08XTick = CurrentTick;
+//	  }
 
 	  ////////////////////////////////////// SENSOR READING ////////////////////////////////////
 
@@ -243,15 +297,15 @@ int main(void)
 //	  Sensor_Data.humidity = DHT22_Data.Humidity;
 
 	  // Reading Data in MX7655 Sensor
-	  Sensor_Data.temperature = (Max6675_Read_Temp()*100);
+//	  Sensor_Data.temperature = (Max6675_Read_Temp()*100);
 
 	  // Reading Data in Voltage Sensor
-	  Get_Voltage_Measurement(&Volt_Current_Data);
-	  Sensor_Data.voltage = (Volt_Current_Data.voltage*100);
+//	  Get_Voltage_Measurement(&Volt_Current_Data);
+//	  Sensor_Data.voltage = (Volt_Current_Data.voltage*100);
 
 	  // Reading Data in Current Sensor
-	  Get_Current_Measurement(&Volt_Current_Data);
-	  Sensor_Data.current = (Volt_Current_Data.current*100);
+//	  Get_Current_Measurement(&Volt_Current_Data);
+//	  Sensor_Data.current = (Volt_Current_Data.current*100);
 
 	  // Reading Data in Load cell Sensor
 //	  Sensor_Data.loadcell = hx711_measure_weight(Loadcell_Data);
@@ -259,15 +313,20 @@ int main(void)
 	  ////////////////////////////////////// SENDING DATA TO PC ////////////////////////////////
 
 	  // Sending BNO08X Data
-	  tx_pc_send_BNO08X(BNO08x_Data);
+//	  tx_pc_send_BNO08X(BNO08x_Data);
 
 	  // Sending Sensor Data
-	  tx_pc_send_Sensor(Sensor_Data);
+//	  tx_pc_send_Sensor(Sensor_Data);
+
+	  // Sending Sensor Data
+//	  tx_pc_send_Odometry(message_from_ctrl.x_pos,message_from_ctrl.y_pos,message_from_ctrl.t_pos,message_from_ctrl.x_vel,message_from_ctrl.y_vel,message_from_ctrl.t_vel);
 
 	  ////////////////////////////////////// SENDING DATA TO CONTROL ///////////////////////////
 
 	  // Sending BNO08X Data
+
 	  tx_ctrl_send_BNO08X(BNO08x_Data);
+//	  HAL_Delay(10);
 
     /* USER CODE END WHILE */
 

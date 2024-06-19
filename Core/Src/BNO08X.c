@@ -25,6 +25,7 @@ void BNO08X_GetData(BNO08X_Typedef *sensorData){
     }
 
     sensorData->checksum = RX_Data[18];
+
     HAL_UART_Receive_DMA(&huart, RX_Data, sizeof(RX_Data));
 }
 
