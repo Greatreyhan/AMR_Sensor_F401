@@ -92,17 +92,13 @@ void rx_ctrl_get(com_ctrl_get_t* get){
 
 	for(int i = 0; i < 16; i++){
 		if((rxbuf_get_ctrl[0] == 0xA5) && (rxbuf_get_ctrl[1] == 0x5A)){
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 			// Check for ping
 			if(rxbuf_get_ctrl[i+2] == 0x01){
 				get->cmd = 0x01;
-				uint8_t txbuf[3] = {0xA5, 0x5A, 0x01};
-				HAL_UART_Transmit(huart_ctrl, txbuf, 3, 1);
 			}
 
 			// Check for "Move" Instruction Given from Sensor
 			else if(rxbuf_get_ctrl[i+2] == 0x15){
-
 				if((rxbuf_get_ctrl[i+3] & 0x80)) get->x_pos = ((rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4])-(65536);
 				else get->x_pos = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
 
@@ -191,6 +187,8 @@ void rx_ctrl_get(com_ctrl_get_t* get){
 				get->astar_coordinate_y[rxbuf_get_ctrl[i+3]*5-0] = (rxbuf_get_ctrl[i+14]);
 			}
 
+		}
+		else{
 		}
 	}
 	HAL_UART_Receive_DMA(huart_ctrl, rxbuf_get_ctrl, 16);
