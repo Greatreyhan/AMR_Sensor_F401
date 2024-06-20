@@ -1,0 +1,13 @@
+../Core/Src/Motor.c:15:6:agv_run_motor	19
+../Core/Src/Motor.c:88:6:agv_stop	1
+../Core/Src/Motor.c:93:6:agv_stop_all	1
+../Core/Src/Motor.c:100:6:agv_reset_all	1
+../Core/Src/Motor.c:107:6:agv_encoder_start	1
+../Core/Src/Motor.c:115:6:agv_forward_kinematic	1
+../Core/Src/Motor.c:120:8:agv_kinematic_Sx	1
+../Core/Src/Motor.c:124:8:agv_kinematic_Sy	1
+../Core/Src/Motor.c:128:8:agv_kinematic_St	1
+../Core/Src/Motor.c:135:6:agv_inverse_kinematic	1
+../Core/Src/Motor.c:147:6:agv_inverse_kinematic_basic	1
+../Core/Src/Motor.c:159:8:agv_calculate_encoder	1
+../Core/Src/Motor.c:165:6:agv_speed_to_pwm	2

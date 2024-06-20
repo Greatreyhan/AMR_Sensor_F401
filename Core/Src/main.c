@@ -40,10 +40,10 @@
 /* USER CODE BEGIN PTD */
 #define		USE_BNO08X
 //#define		USE_DHT22
-#define		USE_VOLT_CURRENT
+//#define		USE_VOLT_CURRENT
 //#define		USE_LOADCELL
 #define		USE_COM_CONTROL
-#define		USE_COM_PC
+//#define		USE_COM_PC
 //#define		USE_LCD
 
 /////////////////////////////// INTERVAL TIME ///////////////////////////////////

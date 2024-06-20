@@ -11,14 +11,8 @@
 
 #include "main.h"
 #include "BNO08X.h"
+#include "Motor.h"
 #include <stdbool.h>
-
-typedef enum{
-	FORWARD_DIR = 0x01U,
-	BACKWARD_DIR = 0x02U,
-	RIGHT_DIR = 0x03U,
-	LEFT_DIR = 0x04U
-}move_direction_t;
 
 typedef enum{
 	PING = 0x01U,
@@ -35,13 +29,6 @@ typedef struct{
 	int16_t voltage;
 	int16_t loadcell;
 }sensor_package_t;
-
-typedef struct{
-	uint16_t vertical_distance;
-	uint16_t horizontal_distance;
-	uint16_t vertical_speed;
-	uint16_t horizontal_speed;
-}encoder_package_t;
 
 typedef struct{
 	bool ping;
@@ -75,9 +62,7 @@ typedef struct{
 	int16_t roll;
 	int16_t pitch;
 	int16_t yaw;
-	move_direction_t direction;
 	uint8_t speed;
-	uint16_t distance;
 	command_type_t cmd;
 }com_pc_get_t;
 
@@ -100,9 +85,7 @@ typedef struct{
 	int16_t roll;
 	int16_t pitch;
 	int16_t yaw;
-	move_direction_t direction;
 	uint8_t speed;
-	uint16_t distance;
 	command_type_t cmd;
 }com_ctrl_get_t;
 
@@ -125,9 +108,7 @@ typedef struct{
 	int16_t roll;
 	int16_t pitch;
 	int16_t yaw;
-	move_direction_t direction;
 	uint8_t speed;
-	uint16_t distance;
 	command_type_t cmd;
 }com_all_get_t;
 
@@ -147,7 +128,7 @@ void komunikasi_pc_init(UART_HandleTypeDef* uart_handler);
 bool tx_pc_ping(void);
 uint8_t checksum_pc_generator(uint8_t* arr, uint8_t size);
 bool tx_pc_send_BNO08X(BNO08X_Typedef BNO08x);
-bool tx_pc_send_Encoder(encoder_package_t Encoder_Package);
+bool tx_pc_send_Encoder(kinematic_t encoder);
 bool tx_pc_send_Sensor(sensor_package_t Sensor);
 bool tx_pc_send_Odometry(int16_t Sx, int16_t Sy, int16_t St, int16_t Vx, int16_t Vy, int16_t Vt);
 void rx_pc_start(void);
