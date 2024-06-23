@@ -217,5 +217,5 @@ float hx711_measure_weight(hx711_t hx711){
 	// Weight cannot be negative
 	weightB = (weightB < 0) ? 0 : weightB;
 
-	return weightA;
+	return weightB;
 }

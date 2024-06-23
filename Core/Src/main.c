@@ -43,7 +43,7 @@
 //#define		USE_VOLT_CURRENT
 //#define		USE_LOADCELL
 #define		USE_COM_CONTROL
-//#define		USE_COM_PC
+#define		USE_COM_PC
 //#define		USE_LCD
 
 /////////////////////////////// INTERVAL TIME ///////////////////////////////////
@@ -162,10 +162,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		// Callback Receive data from STM32 Control
 		#ifdef USE_COM_CONTROL
 		rx_ctrl_get(&message_from_ctrl);
+
 		#endif
 	}
 }
 
+float data_loadA = 0;
+float data_loadB = 0;
 /* USER CODE END 0 */
 
 /**
@@ -223,7 +226,9 @@ int main(void)
 
     // Load cell Initialization
     #ifdef USE_LOADCELL
-    hx711_start(&Loadcell_Data, GPIOB, GPIO_PIN_0, GPIOB, GPIO_PIN_1);
+//    hx711_calibration(&Loadcell_Data, GPIOB, GPIO_PIN_0, GPIOB, GPIO_PIN_1);
+    hx711_init(&Loadcell_Data, GPIOB, GPIO_PIN_0, GPIOB, GPIO_PIN_1);
+    set_scale(&Loadcell_Data, 115.598, 72.818);
     #endif
 
     // Initialize Communication to Control
@@ -247,13 +252,17 @@ int main(void)
     fillScreen(BLACK);
     setRotation(135);
     #endif
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+//    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
   while (1)
   {
-	  ////////////////////////////////////// ASYNCHRONOUS READING & SENDING ///////////////////////////////////////////
+//	  data_loadA = get_weight(&Loadcell_Data, 10, CHANNEL_A);
+//	  data_loadB = get_weight(&Loadcell_Data, 10, CHANNEL_B);
+	  	  ////////////////////////////////////// ASYNCHRONOUS READING & SENDING ///////////////////////////////////////////
 
 //	  CurrentTick = HAL_GetTick();
 //
@@ -312,19 +321,20 @@ int main(void)
 
 	  ////////////////////////////////////// SENDING DATA TO PC ////////////////////////////////
 
-	  // Sending BNO08X Data
-//	  tx_pc_send_BNO08X(BNO08x_Data);
+//	  tx_pc_ping();
+////	   Sending BNO08X Data
+	  tx_pc_send_BNO08X(BNO08x_Data);
+//
+////	   Sending Sensor Data
+	  tx_pc_send_Sensor(Sensor_Data);
+//
+////	   Sending Sensor Data
+	tx_pc_send_Odometry(message_from_ctrl.x_pos,message_from_ctrl.y_pos,message_from_ctrl.t_pos,message_from_ctrl.x_vel,message_from_ctrl.y_vel,message_from_ctrl.t_vel);
 
-	  // Sending Sensor Data
-//	  tx_pc_send_Sensor(Sensor_Data);
-
-	  // Sending Sensor Data
-//	  tx_pc_send_Odometry(message_from_ctrl.x_pos,message_from_ctrl.y_pos,message_from_ctrl.t_pos,message_from_ctrl.x_vel,message_from_ctrl.y_vel,message_from_ctrl.t_vel);
 
 	  ////////////////////////////////////// SENDING DATA TO CONTROL ///////////////////////////
 
 	  // Sending BNO08X Data
-
 	  tx_ctrl_send_BNO08X(BNO08x_Data);
 //	  HAL_Delay(10);
 

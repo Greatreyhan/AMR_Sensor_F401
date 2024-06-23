@@ -84,26 +84,31 @@ void rx_ctrl_get(com_ctrl_get_t* get){
 
 			// Check for "Move" Instruction Given from Sensor
 			else if(rxbuf_get_ctrl[2] == 0x15){
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-				if((rxbuf_get_ctrl[i+3] & 0x80)) get->x_pos = ((rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4])-(65536);
-				else get->x_pos = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
+				for(int j = 0; j < 19; j++){
+					get->astar_coordinate_x[j] = rxbuf_get_ctrl[j];
+				}
+//				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+				if((rxbuf_get_ctrl[3] & 0x80)) get->x_pos = ((rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4])-(65536);
+				else get->x_pos = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
 
-				if((rxbuf_get_ctrl[i+5] & 0x80)) get->y_pos = ((rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6])-(65536);
-				else get->y_pos = (rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6];
+				if((rxbuf_get_ctrl[5] & 0x80)) get->y_pos = ((rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6])-(65536);
+				else get->y_pos = (rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6];
 
-				if((rxbuf_get_ctrl[i+7] & 0x80)) get->t_pos = ((rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8])-(65536);
-				else get->t_pos = (rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8];
+				if((rxbuf_get_ctrl[7] & 0x80)) get->t_pos = ((rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8])-(65536);
+				else get->t_pos = (rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8];
 
-				if((rxbuf_get_ctrl[i+9] & 0x80)) get->x_vel = ((rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10])-(65536);
-				else get->x_vel = (rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10];
+				if((rxbuf_get_ctrl[9] & 0x80)) get->x_vel = ((rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10])-(65536);
+				else get->x_vel = (rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10];
 
-				if((rxbuf_get_ctrl[i+11] & 0x80)) get->y_vel = ((rxbuf_get_ctrl[i+11] << 8) | rxbuf_get_ctrl[i+12])-(65536);
-				else get->y_vel = (rxbuf_get_ctrl[i+11] << 8) | rxbuf_get_ctrl[i+12];
+				if((rxbuf_get_ctrl[11] & 0x80)) get->y_vel = ((rxbuf_get_ctrl[11] << 8) | rxbuf_get_ctrl[12])-(65536);
+				else get->y_vel = (rxbuf_get_ctrl[11] << 8) | rxbuf_get_ctrl[12];
 
-				if((rxbuf_get_ctrl[i+13] & 0x80)) get->t_vel = ((rxbuf_get_ctrl[i+13] << 8) | rxbuf_get_ctrl[i+14])-(65536);
-				else get->t_vel = (rxbuf_get_ctrl[i+13] << 8) | rxbuf_get_ctrl[i+14];
+				if((rxbuf_get_ctrl[13] & 0x80)) get->t_vel = ((rxbuf_get_ctrl[13] << 8) | rxbuf_get_ctrl[14])-(65536);
+				else get->t_vel = (rxbuf_get_ctrl[13] << 8) | rxbuf_get_ctrl[14];
 
 				get->cmd = STANDBY;
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+//				HAL_Delay(100000);
 
 			}
 
@@ -167,7 +172,7 @@ void rx_ctrl_get(com_ctrl_get_t* get){
 
 		}
 		else{
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+//			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 		}
 	}
 	HAL_UART_Receive_DMA(huart_ctrl, rxbuf_get_ctrl, 19);
@@ -367,7 +372,7 @@ void rx_pc_get(com_pc_get_t* get){
 void rx_all_get(com_all_get_t* get){
 	for(int i = 0; i < 19; i++){
 		if((rxbuf_get_anywhere[0] == 0xA5) && (rxbuf_get_anywhere[1] == 0x5A)){
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+//			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 
 			// Check for ping
 			if(rxbuf_get_anywhere[i+2] == 0x01){
