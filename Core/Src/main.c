@@ -40,8 +40,8 @@
 /* USER CODE BEGIN PTD */
 #define		USE_BNO08X
 //#define		USE_DHT22
-//#define		USE_VOLT_CURRENT
-//#define		USE_LOADCELL
+#define		USE_VOLT_CURRENT
+#define		USE_LOADCELL
 #define		USE_COM_CONTROL
 #define		USE_COM_PC
 //#define		USE_LCD
@@ -70,9 +70,6 @@ hx711_t Loadcell_Data;
 
 // Typedef All Sensor Data
 sensor_package_t Sensor_Data;
-
-// Typedef Communication STM32Control
-feedback_ctrl_t feedback_control;
 
 // Typedef Communication PC
 com_pc_get_t message_from_pc;
@@ -137,7 +134,10 @@ static void MX_SPI1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+int16_t diff_data_yaw[5];
+uint8_t sample_yaw = 0;
+bool is_calibrated = false;
+uint16_t id_astar= 0;
 ////////////////////////////////////// COMMUNICATION CALLBACK ////////////////////////////////////
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -146,9 +146,31 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 		// Callback for BNO08X Data
 		#ifdef USE_BNO08X
-//		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 	    BNO08X_GetData(&BNO08x_Data);
-//	    tx_ctrl_send_BNO08X(BNO08x_Data);
+	    // Handling Calibration
+	    if(!is_calibrated && BNO08x_Data.yaw != 0){
+	    	if(sample_yaw >= 4){
+	    		// Find Average value
+	    		double sum_yaw = 0;
+//	    		for(uint8_t i = 0; i < 5; i++){
+//	    			sum_yaw += diff_data_yaw[i];
+//	    		}
+//	    		sum_yaw = sum_yaw/5;
+
+	    		sum_yaw = diff_data_yaw[4] - diff_data_yaw[0];
+
+	    		// Decision making
+	    		if(sum_yaw > 10000){
+	    			// RESET STM
+	    			HAL_NVIC_SystemReset();
+	    		}
+	    		else{
+	    			is_calibrated = true;
+	    		}
+	    	}
+	    	diff_data_yaw[sample_yaw] = BNO08x_Data.yaw;
+	    	sample_yaw++;
+	    }
     	#endif
 
 	} else if (huart == &huart1) {
@@ -253,6 +275,9 @@ int main(void)
     setRotation(135);
     #endif
 
+    HAL_Delay(5000);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -260,6 +285,13 @@ int main(void)
 //    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
   while (1)
   {
+//	  if(id_astar < 20){
+//		  tx_ctrl_send_Astar(message_from_pc,id_astar);
+//		  id_astar++;
+//	  }
+//	  else{
+//		  id_astar = 0;
+//	  }
 //	  data_loadA = get_weight(&Loadcell_Data, 10, CHANNEL_A);
 //	  data_loadB = get_weight(&Loadcell_Data, 10, CHANNEL_B);
 	  	  ////////////////////////////////////// ASYNCHRONOUS READING & SENDING ///////////////////////////////////////////
@@ -283,8 +315,7 @@ int main(void)
 //		  tx_pc_send_Sensor(Sensor_Data);
 //
 //		  // Sending BNO08X Data
-//		  tx_pc_send_BNO08X(BNO08x_Data);
-//		  HAL_Delay(100);
+////		  if(is_calibrated) tx_pc_send_BNO08X(BNO08x_Data);
 //
 //		  SensorTick = CurrentTick;
 //	  }
@@ -322,20 +353,21 @@ int main(void)
 	  ////////////////////////////////////// SENDING DATA TO PC ////////////////////////////////
 
 //	  tx_pc_ping();
-////	   Sending BNO08X Data
-	  tx_pc_send_BNO08X(BNO08x_Data);
-//
+//	   Sending BNO08X Data
+//	  if(is_calibrated) tx_pc_send_BNO08X(BNO08x_Data);
+
 ////	   Sending Sensor Data
-	  tx_pc_send_Sensor(Sensor_Data);
+//	  tx_pc_send_Sensor(Sensor_Data);
 //
-////	   Sending Sensor Data
-	tx_pc_send_Odometry(message_from_ctrl.x_pos,message_from_ctrl.y_pos,message_from_ctrl.t_pos,message_from_ctrl.x_vel,message_from_ctrl.y_vel,message_from_ctrl.t_vel);
+//	   Sending Sensor Data
+//	  tx_pc_send_Odometry(message_from_ctrl.x_pos,message_from_ctrl.y_pos,message_from_ctrl.t_pos,message_from_ctrl.x_vel,message_from_ctrl.y_vel,message_from_ctrl.t_vel);
 
 
 	  ////////////////////////////////////// SENDING DATA TO CONTROL ///////////////////////////
 
 	  // Sending BNO08X Data
-	  tx_ctrl_send_BNO08X(BNO08x_Data);
+	  tx_ctrl_send_Astar();
+	  if(is_calibrated) tx_ctrl_send_BNO08X(BNO08x_Data);
 //	  HAL_Delay(10);
 
     /* USER CODE END WHILE */
