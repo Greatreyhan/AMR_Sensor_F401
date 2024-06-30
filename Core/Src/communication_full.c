@@ -140,6 +140,14 @@ void rx_ctrl_get(com_ctrl_get_t* get){
 				if((rxbuf_get_ctrl[3] & 0x80)) get->step = ((rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4])-(65536);
 				else get->step = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
 
+				for(int i = 0; i <= id_holder; i++){
+					for(int j = 0; j < 19;j++){
+						rx_buf_holder[(i*19)+j] = 0;
+						rx_buf_command[j] = 0;
+					}
+				}
+				id_holder = 0;
+
 				get->cmd = DATA;
 			}
 
@@ -337,6 +345,18 @@ void rx_pc_get(com_pc_get_t* get){
 			if(rxbuf_get_pc[2] == 0x03){
 				if((rxbuf_get_pc[i+3] & 0x80)) get->step = ((rxbuf_get_pc[i+3] << 8) | rxbuf_get_pc[i+4])-(65536);
 				else get->step = (rxbuf_get_pc[i+3] << 8) | rxbuf_get_pc[i+4];
+
+				if((rxbuf_get_ctrl[3] & 0x80)) get->step = ((rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4])-(65536);
+					else get->step = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
+
+					for(int i = 0; i <= id_holder; i++){
+						for(int j = 0; j < 19;j++){
+							rx_buf_holder[(i*19)+j] = 0;
+							rx_buf_command[j] = 0;
+							}
+					}
+					id_holder = 0;
+
 				get->cmd = DATA;
 			}
 
@@ -397,13 +417,6 @@ void rx_pc_get(com_pc_get_t* get){
 
 				if((rxbuf_get_pc[i+13] & 0x80)) get->t_vel = ((rxbuf_get_pc[i+13] << 8) | rxbuf_get_pc[i+14])-(65536);
 				else get->t_vel = (rxbuf_get_pc[i+13] << 8) | rxbuf_get_pc[i+14];
-
-//				#ifdef	USE_FORWARDING
-//				for(int j=0; j<19; j++){
-//					rx_buf_holder[j] = rxbuf_get_pc[i+j];
-//				}
-//				HAL_UART_Transmit(huart_ctrl, rx_buf_holder, 19, 500);
-//				#endif
 
 				get->cmd = DATA;
 
