@@ -151,21 +151,21 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	    if(!is_calibrated && BNO08x_Data.yaw != 0){
 	    	if(sample_yaw >= 4){
 	    		// Find Average value
-	    		double sum_yaw = 0;
+//	    		double sum_yaw = 0;
 //	    		for(uint8_t i = 0; i < 5; i++){
 //	    			sum_yaw += diff_data_yaw[i];
 //	    		}
 //	    		sum_yaw = sum_yaw/5;
 
-	    		sum_yaw = diff_data_yaw[4] - diff_data_yaw[0];
+//	    		sum_yaw = diff_data_yaw[4] - diff_data_yaw[0];
 
 	    		// Decision making
-	    		if(sum_yaw > 10000){
-	    			// RESET STM
-	    			HAL_NVIC_SystemReset();
+	    		if(diff_data_yaw[0] <= 100 && diff_data_yaw[0] >= 100){
+	    			is_calibrated = true;
 	    		}
 	    		else{
-	    			is_calibrated = true;
+	    			// RESET STM
+	    			HAL_NVIC_SystemReset();
 	    		}
 	    	}
 	    	diff_data_yaw[sample_yaw] = BNO08x_Data.yaw;
@@ -275,7 +275,7 @@ int main(void)
     setRotation(135);
     #endif
 
-    HAL_Delay(5000);
+    HAL_Delay(1000);
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
   /* USER CODE END 2 */
@@ -296,29 +296,33 @@ int main(void)
 //	  data_loadB = get_weight(&Loadcell_Data, 10, CHANNEL_B);
 	  	  ////////////////////////////////////// ASYNCHRONOUS READING & SENDING ///////////////////////////////////////////
 
-//	  CurrentTick = HAL_GetTick();
-//
-//	  if(CurrentTick-SensorTick > SENSOR_INTERVAL){
-//
-//		  // Reading Data in MX7655 Sensor
-//		  Sensor_Data.temperature = (Max6675_Read_Temp()*100);
-//
-//		  // Reading Data in Voltage Sensor
-//		  Get_Voltage_Measurement(&Volt_Current_Data);
-//		  Sensor_Data.voltage = (Volt_Current_Data.voltage*100);
-//
-//		  // Reading Data in Current Sensor
-//		  Get_Current_Measurement(&Volt_Current_Data);
-//		  Sensor_Data.current = (Volt_Current_Data.current*100);
-//
-//		  // Sending Sensor Data
-//		  tx_pc_send_Sensor(Sensor_Data);
-//
-//		  // Sending BNO08X Data
-////		  if(is_calibrated) tx_pc_send_BNO08X(BNO08x_Data);
-//
-//		  SensorTick = CurrentTick;
-//	  }
+	  CurrentTick = HAL_GetTick();
+
+	  if(CurrentTick-SensorTick > SENSOR_INTERVAL){
+
+		  // Reading Data in MX7655 Sensor
+		  Sensor_Data.temperature = (Max6675_Read_Temp()*100);
+
+		  // Reading Data in Voltage Sensor
+		  Get_Voltage_Measurement(&Volt_Current_Data);
+		  Sensor_Data.voltage = (Volt_Current_Data.voltage*100);
+
+		  // Reading Data in Current Sensor
+		  Get_Current_Measurement(&Volt_Current_Data);
+		  Sensor_Data.current = (Volt_Current_Data.current*100);
+
+		  // Sending Sensor Data
+		  tx_pc_send_Sensor(Sensor_Data);
+
+		  // Sending Odometry Data
+		  tx_pc_send_Odometry(message_from_ctrl.x_pos,message_from_ctrl.y_pos,message_from_ctrl.t_pos,message_from_ctrl.x_vel,message_from_ctrl.y_vel,message_from_ctrl.t_vel);
+
+
+		  // Sending BNO08X Data
+		  if(is_calibrated) tx_pc_send_BNO08X(BNO08x_Data);
+
+		  SensorTick = CurrentTick;
+	  }
 
 //	  CurrentTick = HAL_GetTick();
 //	  if(CurrentTick-BNO08XTick > BNO08X_INTERVAL){
@@ -367,6 +371,7 @@ int main(void)
 
 	  // Sending BNO08X Data
 	  tx_ctrl_send_Astar();
+//	  tx_ctrl_ping();
 	  if(is_calibrated) tx_ctrl_send_BNO08X(BNO08x_Data);
 //	  HAL_Delay(10);
 

@@ -17,7 +17,9 @@ static uint8_t rxbuf_get_pc[19];
 //-------------------- CONFIG FOR CONTROL COMMUNICATION --------------------------------------//
 static UART_HandleTypeDef* huart_ctrl;
 static uint8_t rxbuf_get_ctrl[19];
-static uint8_t rx_buf_holder[19];
+static uint8_t rx_buf_command[19];
+static uint8_t rx_buf_holder[100];
+static uint8_t id_holder = 0;
 //******************************************** COMMUNICATION TO CONTROL **********************************************//
 
 void komunikasi_ctrl_init(UART_HandleTypeDef* uart_handler){
@@ -46,8 +48,19 @@ bool tx_ctrl_send_BNO08X(BNO08X_Typedef BNO08x){
 	else return false;
 }
 
-bool tx_ctrl_send_Astar(){
-	if(HAL_UART_Transmit(huart_ctrl, rx_buf_holder, 19, TIMEOUT_SEND) == HAL_OK) return true;
+bool tx_ctrl_send_Astar(void){
+	for(int i = 0; i <= id_holder; i++){
+		uint8_t tx_data[19];
+		for(int j = 0; j < 19;j++){
+			tx_data[j] = rx_buf_holder[(i*19)+j];
+		}
+		HAL_UART_Transmit(huart_ctrl, tx_data, 19, TIMEOUT_SEND);
+	}
+	return true;
+}
+
+bool tx_ctrl_send_Command(void){
+	if(HAL_UART_Transmit(huart_ctrl, rx_buf_command, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
 }
 
@@ -80,10 +93,10 @@ bool tx_ctrl_forwading(uint8_t* msg){
 	else return false;
 }
 bool tx_ctrl_send_Odometry(int16_t Sx, int16_t Sy, int16_t St, int16_t Vx, int16_t Vy, int16_t Vt){
-	uint8_t odometry[] = {0xA5, 0x5A, 0x15, ((Sx >> 8) & 0XFF), ((Sx) & 0XFF), ((Sy >> 8) & 0XFF), ((Sy) & 0XFF), ((St >> 8) & 0XFF), ((St) & 0XFF), ((Vx >> 8) & 0XFF), ((Vx) & 0XFF), ((Vy >> 8) & 0XFF), ((Vy) & 0XFF), ((Vt >> 8) & 0XFF), ((Vt) & 0XFF), 0x00, 0x00, 0x00, 0x00};
-	odometry[18] = checksum_ctrl_generator(odometry, 19);
+	uint8_t odom_data[] = {0xA5, 0x5A, 0x15, ((Sx >> 8) & 0XFF), ((Sx) & 0XFF), ((Sy >> 8) & 0XFF), ((Sy) & 0XFF), ((St >> 8) & 0XFF), ((St) & 0XFF), ((Vx >> 8) & 0XFF), ((Vx) & 0XFF), ((Vy >> 8) & 0XFF), ((Vy) & 0XFF), ((Vt >> 8) & 0XFF), ((Vt) & 0XFF), 0x00, 0x00, 0x00, 0x00};
+	odom_data[18] = checksum_ctrl_generator(odom_data, 19);
 
-	if(HAL_UART_Transmit(huart_ctrl, odometry, 19, TIMEOUT_SEND) == HAL_OK) return true;
+	if(HAL_UART_Transmit(huart_ctrl, odom_data, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
 }
 
@@ -92,7 +105,6 @@ void rx_ctrl_start_get(void){
 }
 
 void rx_ctrl_get(com_ctrl_get_t* get){
-	for(int i = 0; i < 19; i++){
 		if((rxbuf_get_ctrl[0] == 0xA5) && (rxbuf_get_ctrl[1] == 0x5A)){
 
 			// Check for ping
@@ -100,109 +112,112 @@ void rx_ctrl_get(com_ctrl_get_t* get){
 				get->cmd = PING;
 			}
 			// Check for BNO08X Sensor
-			else if(rxbuf_get_ctrl[i+2] == 0x02){
+			else if(rxbuf_get_ctrl[2] == 0x02){
 
-				if((rxbuf_get_ctrl[i+3] & 0x80)) get->yaw = ((rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4])-(65536);
-				else get->yaw = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
+				if((rxbuf_get_ctrl[3] & 0x80)) get->yaw = ((rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4])-(65536);
+				else get->yaw = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
 
-				if((rxbuf_get_ctrl[i+5] & 0x80)) get->pitch = ((rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6])-(65536);
-				else get->pitch = (rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6];
+				if((rxbuf_get_ctrl[5] & 0x80)) get->pitch = ((rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6])-(65536);
+				else get->pitch = (rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6];
 
-				if((rxbuf_get_ctrl[i+7] & 0x80)) get->roll = ((rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8])-(65536);
-				else get->roll = (rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8];
+				if((rxbuf_get_ctrl[7] & 0x80)) get->roll = ((rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8])-(65536);
+				else get->roll = (rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8];
 
-				if((rxbuf_get_ctrl[i+9] & 0x80)) get->x_acceleration = ((rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10])-(65536);
-				else get->x_acceleration = (rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10];
+				if((rxbuf_get_ctrl[9] & 0x80)) get->x_acceleration = ((rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10])-(65536);
+				else get->x_acceleration = (rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10];
 
-				if((rxbuf_get_ctrl[i+11] & 0x80)) get->y_acceleration = ((rxbuf_get_ctrl[i+11] << 8) | rxbuf_get_ctrl[i+12])-(65536);
-				else get->y_acceleration = (rxbuf_get_ctrl[i+11] << 8) | rxbuf_get_ctrl[i+12];
+				if((rxbuf_get_ctrl[11] & 0x80)) get->y_acceleration = ((rxbuf_get_ctrl[11] << 8) | rxbuf_get_ctrl[12])-(65536);
+				else get->y_acceleration = (rxbuf_get_ctrl[11] << 8) | rxbuf_get_ctrl[12];
 
-				if((rxbuf_get_ctrl[i+13] & 0x80)) get->z_acceleration = ((rxbuf_get_ctrl[i+13] << 8) | rxbuf_get_ctrl[i+14])-(65536);
-				else get->z_acceleration = (rxbuf_get_ctrl[i+13] << 8) | rxbuf_get_ctrl[i+14];
+				if((rxbuf_get_ctrl[13] & 0x80)) get->z_acceleration = ((rxbuf_get_ctrl[13] << 8) | rxbuf_get_ctrl[14])-(65536);
+				else get->z_acceleration = (rxbuf_get_ctrl[13] << 8) | rxbuf_get_ctrl[14];
 
 				get->cmd = DATA;
 			}
 
 			// Check for Task Done
 			if(rxbuf_get_ctrl[2] == 0x03){
-				if((rxbuf_get_ctrl[i+3] & 0x80)) get->step = ((rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4])-(65536);
-				else get->step = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
+				if((rxbuf_get_ctrl[3] & 0x80)) get->step = ((rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4])-(65536);
+				else get->step = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
 
 				get->cmd = DATA;
 			}
 
 			// Check for Kinematic
-			else if(rxbuf_get_ctrl[i+2] == 0x05){
+			else if(rxbuf_get_ctrl[2] == 0x05){
 
-				if((rxbuf_get_ctrl[i+3] & 0x80)) get->Sx = ((rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4])-(65536);
-				else get->Sx = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
+				if((rxbuf_get_ctrl[3] & 0x80)) get->Sx = ((rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4])-(65536);
+				else get->Sx = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
 
-				if((rxbuf_get_ctrl[i+5] & 0x80)) get->Sy = ((rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6])-(65536);
-				else get->Sy = (rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6];
+				if((rxbuf_get_ctrl[5] & 0x80)) get->Sy = ((rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6])-(65536);
+				else get->Sy = (rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6];
 
-				if((rxbuf_get_ctrl[i+7] & 0x80)) get->St = ((rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8])-(65536);
-				else get->St = (rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8];
+				if((rxbuf_get_ctrl[7] & 0x80)) get->St = ((rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8])-(65536);
+				else get->St = (rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8];
 
-				if((rxbuf_get_ctrl[i+9] & 0x80)) get->T = ((rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10])-(65536);
-				else get->T = (rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10];
+				if((rxbuf_get_ctrl[9] & 0x80)) get->T = ((rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10])-(65536);
+				else get->T = (rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10];
 
 				get->cmd = DATA;
 			}
 
 			// Check for Encoder
-			else if(rxbuf_get_ctrl[i+2] == 0x06){
+			else if(rxbuf_get_ctrl[2] == 0x06){
 
-				if((rxbuf_get_ctrl[i+3] & 0x80)) get->S3 = ((rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4])-(65536);
-				else get->S3 = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
+				if((rxbuf_get_ctrl[3] & 0x80)) get->S3 = ((rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4])-(65536);
+				else get->S3 = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
 
-				if((rxbuf_get_ctrl[i+5] & 0x80)) get->S4 = ((rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6])-(65536);
-				else get->S4 = (rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6];
+				if((rxbuf_get_ctrl[5] & 0x80)) get->S4 = ((rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6])-(65536);
+				else get->S4 = (rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6];
 
-				if((rxbuf_get_ctrl[i+7] & 0x80)) get->V3 = ((rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8])-(65536);
-				else get->V3 = (rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8];
+				if((rxbuf_get_ctrl[7] & 0x80)) get->V3 = ((rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8])-(65536);
+				else get->V3 = (rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8];
 
-				if((rxbuf_get_ctrl[i+9] & 0x80)) get->V4 = ((rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10])-(65536);
-				else get->V4 = (rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10];
+				if((rxbuf_get_ctrl[9] & 0x80)) get->V4 = ((rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10])-(65536);
+				else get->V4 = (rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10];
 
 				get->cmd = DATA;
 			}
 
 			// Check for Odometry
 			else if(rxbuf_get_ctrl[2] == 0x15){
-				if((rxbuf_get_ctrl[i+3] & 0x80)) get->x_pos = ((rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4])-(65536);
-				else get->x_pos = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
+				if((rxbuf_get_ctrl[3] & 0x80)) get->x_pos = ((rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4])-(65536);
+				else get->x_pos = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
 
-				if((rxbuf_get_ctrl[i+5] & 0x80)) get->y_pos = ((rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6])-(65536);
-				else get->y_pos = (rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6];
+				if((rxbuf_get_ctrl[5] & 0x80)) get->y_pos = ((rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6])-(65536);
+				else get->y_pos = (rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6];
 
-				if((rxbuf_get_ctrl[i+7] & 0x80)) get->t_pos = ((rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8])-(65536);
-				else get->t_pos = (rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8];
+				if((rxbuf_get_ctrl[7] & 0x80)) get->t_pos = ((rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8])-(65536);
+				else get->t_pos = (rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8];
 
-				if((rxbuf_get_ctrl[i+9] & 0x80)) get->x_vel = ((rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10])-(65536);
-				else get->x_vel = (rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10];
+				if((rxbuf_get_ctrl[9] & 0x80)) get->x_vel = ((rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10])-(65536);
+				else get->x_vel = (rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10];
 
-				if((rxbuf_get_ctrl[i+11] & 0x80)) get->y_vel = ((rxbuf_get_ctrl[i+11] << 8) | rxbuf_get_ctrl[i+12])-(65536);
-				else get->y_vel = (rxbuf_get_ctrl[i+11] << 8) | rxbuf_get_ctrl[i+12];
+				if((rxbuf_get_ctrl[11] & 0x80)) get->y_vel = ((rxbuf_get_ctrl[11] << 8) | rxbuf_get_ctrl[12])-(65536);
+				else get->y_vel = (rxbuf_get_ctrl[11] << 8) | rxbuf_get_ctrl[12];
 
-				if((rxbuf_get_ctrl[i+13] & 0x80)) get->t_vel = ((rxbuf_get_ctrl[i+13] << 8) | rxbuf_get_ctrl[i+14])-(65536);
-				else get->t_vel = (rxbuf_get_ctrl[i+13] << 8) | rxbuf_get_ctrl[i+14];
+				if((rxbuf_get_ctrl[13] & 0x80)) get->t_vel = ((rxbuf_get_ctrl[13] << 8) | rxbuf_get_ctrl[14])-(65536);
+				else get->t_vel = (rxbuf_get_ctrl[13] << 8) | rxbuf_get_ctrl[14];
 
 				get->cmd = DATA;
 
 			}
 
 			// Check for "Move" Instruction Given from Jetson Nano
-			else if(rxbuf_get_ctrl[i+2] == 0x12){
-				if((rxbuf_get_ctrl[i+3] & 0x80)) get->x_speed = ((rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4])-(65536);
-				else get->x_speed = (rxbuf_get_ctrl[i+3] << 8) | rxbuf_get_ctrl[i+4];
+			else if(rxbuf_get_ctrl[2] == 0x12){
 
-				if((rxbuf_get_ctrl[i+5] & 0x80)) get->y_speed = ((rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6])-(65536);
-				else get->y_speed = (rxbuf_get_ctrl[i+5] << 8) | rxbuf_get_ctrl[i+6];
+				get->id_data = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4] ;
 
-				if((rxbuf_get_ctrl[i+7] & 0x80)) get->t_speed = ((rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8])-(65536);
-				else get->t_speed = (rxbuf_get_ctrl[i+7] << 8) | rxbuf_get_ctrl[i+8];
+				if((rxbuf_get_ctrl[5] & 0x80)) get->x_data = ((rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6])-(65536);
+				else get->x_data = (rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6];
 
-				get->step = (rxbuf_get_ctrl[i+9] << 8) | rxbuf_get_ctrl[i+10] ;
+				if((rxbuf_get_ctrl[7] & 0x80)) get->y_data = ((rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8])-(65536);
+				else get->y_data = (rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8];
+
+				if((rxbuf_get_ctrl[9] & 0x80)) get->t_data = ((rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10])-(65536);
+				else get->t_data = (rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10];
+
+				get->aktuator = rxbuf_get_ctrl[11] ;
 
 				get->cmd = MOVE;
 
@@ -210,29 +225,30 @@ void rx_ctrl_get(com_ctrl_get_t* get){
 
 			// Check for Astar Sequence Given from Jetson Nano
 			else if(rxbuf_get_ctrl[2] == 0x13){
-				get->astar_id = (rxbuf_get_ctrl[i+3]);
-				get->astar_length = (rxbuf_get_ctrl[i+4]);
-				get->astar_coordinate_x[rxbuf_get_ctrl[i+3]*5+0] = (rxbuf_get_ctrl[i+5]);
-				get->astar_coordinate_y[rxbuf_get_ctrl[i+3]*5+0] = (rxbuf_get_ctrl[i+6]);
-				get->astar_coordinate_x[rxbuf_get_ctrl[i+3]*5+1] = (rxbuf_get_ctrl[i+7]);
-				get->astar_coordinate_y[rxbuf_get_ctrl[i+3]*5+1] = (rxbuf_get_ctrl[i+8]);
-				get->astar_coordinate_x[rxbuf_get_ctrl[i+3]*5+2] = (rxbuf_get_ctrl[i+9]);
-				get->astar_coordinate_y[rxbuf_get_ctrl[i+3]*5+2] = (rxbuf_get_ctrl[i+10]);
-				get->astar_coordinate_x[rxbuf_get_ctrl[i+3]*5+3] = (rxbuf_get_ctrl[i+11]);
-				get->astar_coordinate_y[rxbuf_get_ctrl[i+3]*5+3] = (rxbuf_get_ctrl[i+12]);
-				get->astar_coordinate_x[rxbuf_get_ctrl[i+3]*5+4] = (rxbuf_get_ctrl[i+13]);
-				get->astar_coordinate_y[rxbuf_get_ctrl[i+3]*5+4] = (rxbuf_get_ctrl[i+14]);
-
+				uint8_t chk = checksum_ctrl_generator(rxbuf_get_ctrl,18);
+				if(chk == rxbuf_get_ctrl[18]){
+				get->astar_id = (rxbuf_get_ctrl[3]);
+				get->astar_length = (rxbuf_get_ctrl[4]);
+				get->astar_coordinate_x[rxbuf_get_ctrl[3]*5+0] = (rxbuf_get_ctrl[5]);
+				get->astar_coordinate_y[rxbuf_get_ctrl[3]*5+0] = (rxbuf_get_ctrl[6]);
+				get->astar_coordinate_x[rxbuf_get_ctrl[3]*5+1] = (rxbuf_get_ctrl[7]);
+				get->astar_coordinate_y[rxbuf_get_ctrl[3]*5+1] = (rxbuf_get_ctrl[8]);
+				get->astar_coordinate_x[rxbuf_get_ctrl[3]*5+2] = (rxbuf_get_ctrl[9]);
+				get->astar_coordinate_y[rxbuf_get_ctrl[3]*5+2] = (rxbuf_get_ctrl[10]);
+				get->astar_coordinate_x[rxbuf_get_ctrl[3]*5+3] = (rxbuf_get_ctrl[11]);
+				get->astar_coordinate_y[rxbuf_get_ctrl[3]*5+3] = (rxbuf_get_ctrl[12]);
+				get->astar_coordinate_x[rxbuf_get_ctrl[3]*5+4] = (rxbuf_get_ctrl[13]);
+				get->astar_coordinate_y[rxbuf_get_ctrl[3]*5+4] = (rxbuf_get_ctrl[14]);
+				get->astar_total_length = (rxbuf_get_ctrl[15] << 8) | rxbuf_get_ctrl[16];
+				get->astar_msg_id = rxbuf_get_ctrl[17];
 				get->cmd = MOVE;
+				}
 
 			}
 
 		}
-
-	}
 	HAL_UART_Receive_DMA(huart_ctrl, rxbuf_get_ctrl, 19);
 }
-
 //**************************************************** COMMUNICATION TO JETSON NANO *******************************************//
 
 void komunikasi_pc_init(UART_HandleTypeDef* uart_handler){
@@ -395,51 +411,55 @@ void rx_pc_get(com_pc_get_t* get){
 
 			// Check for "Move" Instruction Given from Jetson Nano
 			else if(rxbuf_get_pc[i+2] == 0x12){
-				if((rxbuf_get_pc[i+3] & 0x80)) get->x_speed = ((rxbuf_get_pc[i+3] << 8) | rxbuf_get_pc[i+4])-(65536);
-				else get->x_speed = (rxbuf_get_pc[i+3] << 8) | rxbuf_get_pc[i+4];
+				for(int j=0; j<19; j++){
+					rx_buf_command[j] = rxbuf_get_pc[j];
+				}
 
-				if((rxbuf_get_pc[i+5] & 0x80)) get->y_speed = ((rxbuf_get_pc[i+5] << 8) | rxbuf_get_pc[i+6])-(65536);
-				else get->y_speed = (rxbuf_get_pc[i+5] << 8) | rxbuf_get_pc[i+6];
+				get->id_data = (rxbuf_get_pc[i+3] << 8) | rxbuf_get_pc[i+4];
 
-				if((rxbuf_get_pc[i+7] & 0x80)) get->t_speed = ((rxbuf_get_pc[i+7] << 8) | rxbuf_get_pc[i+8])-(65536);
-				else get->t_speed = (rxbuf_get_pc[i+7] << 8) | rxbuf_get_pc[i+8];
+				if((rxbuf_get_pc[i+5] & 0x80)) get->x_data = ((rxbuf_get_pc[i+5] << 8) | rxbuf_get_pc[i+6])-(65536);
+				else get->x_data = (rxbuf_get_pc[i+5] << 8) | rxbuf_get_pc[i+6];
 
-				get->step = (rxbuf_get_pc[i+9] << 8) | rxbuf_get_pc[i+10];
+				if((rxbuf_get_pc[i+7] & 0x80)) get->y_data = ((rxbuf_get_pc[i+7] << 8) | rxbuf_get_pc[i+8])-(65536);
+				else get->y_data = (rxbuf_get_pc[i+7] << 8) | rxbuf_get_pc[i+8];
+
+				if((rxbuf_get_pc[i+9] & 0x80)) get->t_data = ((rxbuf_get_pc[i+9] << 8) | rxbuf_get_pc[i+10])-(65536);
+				else get->t_data = (rxbuf_get_pc[i+9] << 8) | rxbuf_get_pc[i+10];
+
+				get->aktuator = rxbuf_get_pc[i+11];
 
 				get->cmd = MOVE;
 
-//				#ifdef	USE_FORWARDING
-//				for(int j=0; j<19; j++){
-//					rx_buf_holder[j] = rxbuf_get_pc[i+j];
-//				}
-//				HAL_UART_Transmit(huart_ctrl, rx_buf_holder, 19, TIMEOUT_SEND);
-//				#endif
 			}
 
 			// Check for Astar Sequence Given from Jetson Nano
 			else if(rxbuf_get_pc[2] == 0x13){
 				uint8_t chk = checksum_pc_generator(rxbuf_get_pc,18);
 				if(chk == rxbuf_get_pc[18]){
+					// Save message to holder
 					for(int j=0; j<19; j++){
-						rx_buf_holder[j] = rxbuf_get_pc[j];
+						rx_buf_holder[((rxbuf_get_pc[i+3])*19)+j] = rxbuf_get_pc[j];
 					}
-				get->astar_id = (rxbuf_get_pc[i+3]);
-				get->astar_length = (rxbuf_get_pc[i+4]);
-				get->astar_coordinate_x[rxbuf_get_pc[i+3]*5+0] = (rxbuf_get_pc[i+5]);
-				get->astar_coordinate_y[rxbuf_get_pc[i+3]*5+0] = (rxbuf_get_pc[i+6]);
-				get->astar_coordinate_x[rxbuf_get_pc[i+3]*5+1] = (rxbuf_get_pc[i+7]);
-				get->astar_coordinate_y[rxbuf_get_pc[i+3]*5+1] = (rxbuf_get_pc[i+8]);
-				get->astar_coordinate_x[rxbuf_get_pc[i+3]*5+2] = (rxbuf_get_pc[i+9]);
-				get->astar_coordinate_y[rxbuf_get_pc[i+3]*5+2] = (rxbuf_get_pc[i+10]);
-				get->astar_coordinate_x[rxbuf_get_pc[i+3]*5+3] = (rxbuf_get_pc[i+11]);
-				get->astar_coordinate_y[rxbuf_get_pc[i+3]*5+3] = (rxbuf_get_pc[i+12]);
-				get->astar_coordinate_x[rxbuf_get_pc[i+3]*5+4] = (rxbuf_get_pc[i+13]);
-				get->astar_coordinate_y[rxbuf_get_pc[i+3]*5+4] = (rxbuf_get_pc[i+14]);
+					// get id holder
+					if(rxbuf_get_pc[i+3]>id_holder){
+						id_holder = rxbuf_get_pc[i+3];
+					}
+					get->astar_id = (rxbuf_get_pc[i+3]);
+					get->astar_length = (rxbuf_get_pc[i+4]);
+					get->astar_coordinate_x[rxbuf_get_pc[i+3]*5+0] = (rxbuf_get_pc[i+5]);
+					get->astar_coordinate_y[rxbuf_get_pc[i+3]*5+0] = (rxbuf_get_pc[i+6]);
+					get->astar_coordinate_x[rxbuf_get_pc[i+3]*5+1] = (rxbuf_get_pc[i+7]);
+					get->astar_coordinate_y[rxbuf_get_pc[i+3]*5+1] = (rxbuf_get_pc[i+8]);
+					get->astar_coordinate_x[rxbuf_get_pc[i+3]*5+2] = (rxbuf_get_pc[i+9]);
+					get->astar_coordinate_y[rxbuf_get_pc[i+3]*5+2] = (rxbuf_get_pc[i+10]);
+					get->astar_coordinate_x[rxbuf_get_pc[i+3]*5+3] = (rxbuf_get_pc[i+11]);
+					get->astar_coordinate_y[rxbuf_get_pc[i+3]*5+3] = (rxbuf_get_pc[i+12]);
+					get->astar_coordinate_x[rxbuf_get_pc[i+3]*5+4] = (rxbuf_get_pc[i+13]);
+					get->astar_coordinate_y[rxbuf_get_pc[i+3]*5+4] = (rxbuf_get_pc[i+14]);
+					get->astar_total_length = (rxbuf_get_pc[i+15] << 8) | rxbuf_get_pc[i+16];
+					get->astar_msg_id = rxbuf_get_pc[i+17];
+					get->cmd = MOVE;
 
-				get->cmd = MOVE;
-
-//				uint8_t forwarder[] = {0xA5, 0x5A, 0x13, rxbuf_get_pc[i+3], rxbuf_get_pc[i+4], rxbuf_get_pc[i+5], rxbuf_get_pc[i+6], rxbuf_get_pc[i+7], rxbuf_get_pc[i+8], rxbuf_get_pc[i+9], rxbuf_get_pc[i+10], rxbuf_get_pc[i+11], rxbuf_get_pc[i+12], rxbuf_get_pc[i+13], rxbuf_get_pc[i+14], rxbuf_get_pc[i+15], rxbuf_get_pc[i+16], rxbuf_get_pc[i+17], rxbuf_get_pc[i+18]};
-//				HAL_UART_Transmit(huart_ctrl, forwarder, 19, 500);
 				}
 			}
 
