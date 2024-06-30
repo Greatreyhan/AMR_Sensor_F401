@@ -160,7 +160,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 //	    		sum_yaw = diff_data_yaw[4] - diff_data_yaw[0];
 
 	    		// Decision making
-	    		if(diff_data_yaw[0] <= 100 && diff_data_yaw[0] >= 100){
+//	    		if(diff_data_yaw[0] <= 100 && diff_data_yaw[0] >= 100){
+	    		if(true){
 	    			is_calibrated = true;
 	    		}
 	    		else{
@@ -371,7 +372,8 @@ int main(void)
 
 	  // Sending BNO08X Data
 	  tx_ctrl_send_Astar();
-//	  tx_ctrl_ping();
+	  tx_ctrl_send_Command();
+	  //	  tx_ctrl_ping();
 	  if(is_calibrated) tx_ctrl_send_BNO08X(BNO08x_Data);
 //	  HAL_Delay(10);
 
