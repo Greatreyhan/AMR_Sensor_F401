@@ -40,8 +40,8 @@ bool tx_ctrl_ping(void){
 	else return false;
 }
 
-bool tx_ctrl_send_BNO08X(BNO08X_Typedef BNO08x){
-	uint8_t BNO[] = {0xA5, 0x5A, 0x02, ((BNO08x.yaw >> 8) & 0XFF), ((BNO08x.yaw) & 0XFF), ((BNO08x.pitch >> 8) & 0XFF), ((BNO08x.pitch) & 0XFF), ((BNO08x.roll >> 8) & 0XFF), ((BNO08x.roll) & 0XFF), ((BNO08x.x_acceleration >> 8) & 0XFF), ((BNO08x.x_acceleration) & 0XFF), ((BNO08x.y_acceleration >> 8) & 0XFF), ((BNO08x.y_acceleration) & 0XFF), ((BNO08x.z_acceleration >> 8) & 0XFF), ((BNO08x.z_acceleration) & 0XFF), 0x00, 0x00, 0x00, 0x00};
+bool tx_ctrl_send_BNO055(BNO055_Typedef BNO055){
+	uint8_t BNO[] = {0xA5, 0x5A, 0x02, ((BNO055.yaw >> 8) & 0XFF), ((BNO055.yaw) & 0XFF), ((BNO055.pitch >> 8) & 0XFF), ((BNO055.pitch) & 0XFF), ((BNO055.roll >> 8) & 0XFF), ((BNO055.roll) & 0XFF), ((BNO055.x_acceleration >> 8) & 0XFF), ((BNO055.x_acceleration) & 0XFF), ((BNO055.y_acceleration >> 8) & 0XFF), ((BNO055.y_acceleration) & 0XFF), ((BNO055.z_acceleration >> 8) & 0XFF), ((BNO055.z_acceleration) & 0XFF), ((BNO055.temperature >> 8) & 0XFF), ((BNO055.temperature) & 0XFF), 0x00, 0x00};
 	BNO[18] = checksum_ctrl_generator(BNO, 19);
 
 	if(HAL_UART_Transmit(huart_ctrl, BNO, 19, TIMEOUT_SEND) == HAL_OK) return true;
@@ -87,7 +87,13 @@ bool tx_ctrl_send_Encoder(kinematic_t encoder){
 	if(HAL_UART_Transmit(huart_ctrl, encoder_data, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
 }
+bool tx_ctrl_send_data(int16_t data1, int16_t data2, int16_t data3, int16_t data4,int16_t data5,int16_t data6,int16_t data7){
+	uint8_t encoder_data[] = {0xA5, 0x5A, 0x55, (((int16_t)data1 >> 8) & 0XFF), (((int16_t)data1) & 0XFF), (((int16_t)data2 >> 8) & 0XFF), (((int16_t)data2) & 0XFF), (((int16_t)data3 >> 8) & 0XFF), (((int16_t)data3) & 0XFF), (((int16_t)data4 >> 8) & 0XFF), (((int16_t)data4) & 0XFF), (((int16_t)data5 >> 8) & 0XFF), (((int16_t)data5) & 0XFF), (((int16_t)data6 >> 8) & 0XFF), (((int16_t)data6) & 0XFF), (((int16_t)data7 >> 8) & 0XFF), (((int16_t)data7) & 0XFF), 0x00};
+	encoder_data[18] = checksum_ctrl_generator(encoder_data, 19);
 
+	if(HAL_UART_Transmit(huart_ctrl, encoder_data, 19, TIMEOUT_SEND) == HAL_OK) return true;
+	else return false;
+}
 bool tx_ctrl_forwading(uint8_t* msg){
 	if(HAL_UART_Transmit(huart_ctrl, msg, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
@@ -211,6 +217,35 @@ void rx_ctrl_get(com_ctrl_get_t* get){
 
 			}
 
+			// Check for Data
+			else if(rxbuf_get_ctrl[2] == 0x55){
+				if((rxbuf_get_ctrl[3] & 0x80)) get->data1 = ((rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4])-(65536);
+				else get->data1 = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
+
+				if((rxbuf_get_ctrl[5] & 0x80)) get->data2 = ((rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6])-(65536);
+				else get->data2 = (rxbuf_get_ctrl[5] << 8) | rxbuf_get_ctrl[6];
+
+				if((rxbuf_get_ctrl[7] & 0x80)) get->data3 = ((rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8])-(65536);
+				else get->data3 = (rxbuf_get_ctrl[7] << 8) | rxbuf_get_ctrl[8];
+
+				if((rxbuf_get_ctrl[9] & 0x80)) get->data4 = ((rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10])-(65536);
+				else get->data4 = (rxbuf_get_ctrl[9] << 8) | rxbuf_get_ctrl[10];
+
+				if((rxbuf_get_ctrl[11] & 0x80)) get->data5 = ((rxbuf_get_ctrl[11] << 8) | rxbuf_get_ctrl[12])-(65536);
+				else get->data5 = (rxbuf_get_ctrl[11] << 8) | rxbuf_get_ctrl[12];
+
+				if((rxbuf_get_ctrl[13] & 0x80)) get->data6 = ((rxbuf_get_ctrl[13] << 8) | rxbuf_get_ctrl[14])-(65536);
+				else get->data6 = (rxbuf_get_ctrl[13] << 8) | rxbuf_get_ctrl[14];
+
+				if((rxbuf_get_ctrl[15] & 0x80)) get->data7 = ((rxbuf_get_ctrl[15] << 8) | rxbuf_get_ctrl[16])-(65536);
+				else get->data7 = (rxbuf_get_ctrl[15] << 8) | rxbuf_get_ctrl[16];
+
+				get->cmd = DATA;
+
+			}
+
+
+
 			// Check for "Move" Instruction Given from Jetson Nano
 			else if(rxbuf_get_ctrl[2] == 0x12){
 
@@ -278,9 +313,9 @@ bool tx_pc_ping(void){
 }
 
 //---------------------------------------------------- Send Roll Pitch & Yaw from BNO08X Sensor -------------------------------------------------------------------------//
-bool tx_pc_send_BNO08X(BNO08X_Typedef BNO08x){
-	uint8_t BNO[] = {0xA5, 0x5A, 0x02, ((BNO08x.yaw >> 8) & 0XFF), ((BNO08x.yaw) & 0XFF), ((BNO08x.pitch >> 8) & 0XFF), ((BNO08x.pitch) & 0XFF), ((BNO08x.roll >> 8) & 0XFF), ((BNO08x.roll) & 0XFF), ((BNO08x.x_acceleration >> 8) & 0XFF), ((BNO08x.x_acceleration) & 0XFF), ((BNO08x.y_acceleration >> 8) & 0XFF), ((BNO08x.y_acceleration) & 0XFF), ((BNO08x.z_acceleration >> 8) & 0XFF), ((BNO08x.z_acceleration) & 0XFF), 0x00, 0x00, 0x00, 0x00};
-	BNO[18] = checksum_pc_generator(BNO, 19);
+bool tx_pc_send_BNO055(BNO055_Typedef BNO055){
+	uint8_t BNO[] = {0xA5, 0x5A, 0x02, ((BNO055.yaw >> 8) & 0XFF), ((BNO055.yaw) & 0XFF), ((BNO055.pitch >> 8) & 0XFF), ((BNO055.pitch) & 0XFF), ((BNO055.roll >> 8) & 0XFF), ((BNO055.roll) & 0XFF), ((BNO055.x_acceleration >> 8) & 0XFF), ((BNO055.x_acceleration) & 0XFF), ((BNO055.y_acceleration >> 8) & 0XFF), ((BNO055.y_acceleration) & 0XFF), ((BNO055.z_acceleration >> 8) & 0XFF), ((BNO055.z_acceleration) & 0XFF), ((BNO055.temperature >> 8) & 0XFF), ((BNO055.temperature) & 0XFF), 0x00, 0x00};
+	BNO[18] = checksum_ctrl_generator(BNO, 19);
 
 	if(HAL_UART_Transmit(huart_pc, BNO, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
@@ -325,6 +360,14 @@ bool tx_pc_send_Odometry(int16_t Sx, int16_t Sy, int16_t St, int16_t Vx, int16_t
 	odometry[18] = checksum_pc_generator(odometry, 19);
 
 	if(HAL_UART_Transmit(huart_pc, odometry, 19, TIMEOUT_SEND) == HAL_OK) return true;
+	else return false;
+}
+
+bool tx_pc_send_data(int16_t data1, int16_t data2, int16_t data3, int16_t data4,int16_t data5,int16_t data6,int16_t data7){
+	uint8_t encoder_data[] = {0xA5, 0x5A, 0x55, (((int16_t)data1 >> 8) & 0XFF), (((int16_t)data1) & 0XFF), (((int16_t)data2 >> 8) & 0XFF), (((int16_t)data2) & 0XFF), (((int16_t)data3 >> 8) & 0XFF), (((int16_t)data3) & 0XFF), (((int16_t)data4 >> 8) & 0XFF), (((int16_t)data4) & 0XFF), (((int16_t)data5 >> 8) & 0XFF), (((int16_t)data5) & 0XFF), (((int16_t)data6 >> 8) & 0XFF), (((int16_t)data6) & 0XFF), (((int16_t)data7 >> 8) & 0XFF), (((int16_t)data7) & 0XFF), 0x00};
+	encoder_data[18] = checksum_ctrl_generator(encoder_data, 19);
+
+	if(HAL_UART_Transmit(huart_pc, encoder_data, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
 }
 
@@ -421,6 +464,35 @@ void rx_pc_get(com_pc_get_t* get){
 				get->cmd = DATA;
 
 			}
+
+			// Check for Data Odometry
+			else if(rxbuf_get_pc[i+2] == 0x55){
+
+				if((rxbuf_get_pc[i+3] & 0x80)) get->data1 = ((rxbuf_get_pc[i+3] << 8) | rxbuf_get_pc[i+4])-(65536);
+				else get->data1 = (rxbuf_get_pc[i+3] << 8) | rxbuf_get_pc[i+4];
+
+				if((rxbuf_get_pc[i+5] & 0x80)) get->data2 = ((rxbuf_get_pc[i+5] << 8) | rxbuf_get_pc[i+6])-(65536);
+				else get->data2 = (rxbuf_get_pc[i+5] << 8) | rxbuf_get_pc[i+6];
+
+				if((rxbuf_get_pc[i+7] & 0x80)) get->data3 = ((rxbuf_get_pc[i+7] << 8) | rxbuf_get_pc[i+8])-(65536);
+				else get->data3 = (rxbuf_get_pc[i+7] << 8) | rxbuf_get_pc[i+8];
+
+				if((rxbuf_get_pc[i+9] & 0x80)) get->data4 = ((rxbuf_get_pc[i+9] << 8) | rxbuf_get_pc[i+10])-(65536);
+				else get->data4 = (rxbuf_get_pc[i+9] << 8) | rxbuf_get_pc[i+10];
+
+				if((rxbuf_get_pc[i+11] & 0x80)) get->data5 = ((rxbuf_get_pc[i+11] << 8) | rxbuf_get_pc[i+12])-(65536);
+				else get->data5 = (rxbuf_get_pc[i+11] << 8) | rxbuf_get_pc[i+12];
+
+				if((rxbuf_get_pc[i+13] & 0x80)) get->data6 = ((rxbuf_get_pc[i+13] << 8) | rxbuf_get_pc[i+14])-(65536);
+				else get->data6 = (rxbuf_get_pc[i+13] << 8) | rxbuf_get_pc[i+14];
+
+				if((rxbuf_get_pc[i+15] & 0x80)) get->data6 = ((rxbuf_get_pc[i+15] << 8) | rxbuf_get_pc[i+15])-(65536);
+				else get->data6 = (rxbuf_get_pc[i+15] << 8) | rxbuf_get_pc[i+16];
+				get->cmd = DATA;
+
+			}
+
+
 
 			// Check for "Move" Instruction Given from Jetson Nano
 			else if(rxbuf_get_pc[i+2] == 0x12){

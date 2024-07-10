@@ -11,6 +11,7 @@
 
 #include "main.h"
 #include "BNO08X.h"
+#include "bno055.h"
 #include "Motor.h"
 #include <stdbool.h>
 
@@ -69,6 +70,15 @@ typedef struct{
 	int16_t St;
 	int16_t T;
 
+	// Data Data
+	int16_t data1;
+	int16_t data2;
+	int16_t data3;
+	int16_t data4;
+	int16_t data5;
+	int16_t data6;
+	int16_t data7;
+
 	// IMU Data
 	int16_t roll;
 	int16_t pitch;
@@ -126,6 +136,15 @@ typedef struct{
 	int16_t St;
 	int16_t T;
 
+	// Data Data
+	int16_t data1;
+	int16_t data2;
+	int16_t data3;
+	int16_t data4;
+	int16_t data5;
+	int16_t data6;
+	int16_t data7;
+
 	// IMU Data
 	int16_t roll;
 	int16_t pitch;
@@ -147,7 +166,7 @@ typedef struct{
 void komunikasi_ctrl_init(UART_HandleTypeDef* uart_handler);
 uint8_t checksum_ctrl_generator(uint8_t* arr, uint8_t size);
 bool tx_ctrl_ping(void);
-bool tx_ctrl_send_BNO08X(BNO08X_Typedef BNO08x);
+bool tx_ctrl_send_BNO055(BNO055_Typedef BNO055);
 bool tx_ctrl_task_done(uint16_t step);
 bool tx_ctrl_forwading(uint8_t* msg);
 bool tx_ctrl_send_Astar(void);
@@ -155,6 +174,7 @@ bool tx_ctrl_send_Command(void);
 bool tx_ctrl_send_Odometry(int16_t Sx, int16_t Sy, int16_t St, int16_t Vx, int16_t Vy, int16_t Vt);
 bool tx_ctrl_send_Kinematic(uint16_t Sx, uint16_t Sy, uint16_t St, uint16_t T);
 bool tx_ctrl_send_Encoder(kinematic_t encoder);
+bool tx_ctrl_send_data(int16_t data1, int16_t data2, int16_t data3, int16_t data4,int16_t data5,int16_t data6,int16_t data7);
 void rx_ctrl_start(void);
 void rx_ctrl_start_get(void);
 void rx_ctrl_get(com_ctrl_get_t* get);
@@ -162,11 +182,12 @@ void rx_ctrl_get(com_ctrl_get_t* get);
 void komunikasi_pc_init(UART_HandleTypeDef* uart_handler);
 bool tx_pc_ping(void);
 uint8_t checksum_pc_generator(uint8_t* arr, uint8_t size);
-bool tx_pc_send_BNO08X(BNO08X_Typedef BNO08x);
+bool tx_pc_send_BNO055(BNO055_Typedef BNO055);
 bool tx_pc_task_done(uint16_t step);
 bool tx_pc_send_Encoder(kinematic_t encoder);
 bool tx_pc_send_Sensor(sensor_package_t Sensor);
 bool tx_pc_send_Odometry(int16_t Sx, int16_t Sy, int16_t St, int16_t Vx, int16_t Vy, int16_t Vt);
+bool tx_pc_send_data(int16_t data1, int16_t data2, int16_t data3, int16_t data4,int16_t data5,int16_t data6,int16_t data7);
 void rx_pc_start(void);
 void rx_pc_start_get(void);
 void rx_pc_get(com_pc_get_t* get);

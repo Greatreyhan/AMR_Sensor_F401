@@ -1,0 +1,4 @@
+../Core/Src/loadcell.c:19:6:init_loadcell	16	static
+../Core/Src/loadcell.c:28:6:microDelay	16	static
+../Core/Src/loadcell.c:34:9:getHX711	24	static
+../Core/Src/loadcell.c:61:5:get_weight_loadcell	32	static

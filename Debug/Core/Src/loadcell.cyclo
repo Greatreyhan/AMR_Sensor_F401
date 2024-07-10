@@ -1,0 +1,4 @@
+../Core/Src/loadcell.c:19:6:init_loadcell	1
+../Core/Src/loadcell.c:28:6:microDelay	2
+../Core/Src/loadcell.c:34:9:getHX711	5
+../Core/Src/loadcell.c:61:5:get_weight_loadcell	2

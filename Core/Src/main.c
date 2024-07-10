@@ -29,22 +29,20 @@
 #include 	<stdint.h>
 #include 	<string.h>
 #include 	<stdio.h>
+#include 	"bno055.h"
+#include	"loadcell.h"
 
 #include 	"communication_full.h"
-#include	"fonts.h"
-#include 	"tft.h"
-#include	"functions.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define		USE_BNO08X
-//#define		USE_DHT22
 #define		USE_VOLT_CURRENT
 #define		USE_LOADCELL
 #define		USE_COM_CONTROL
 #define		USE_COM_PC
-//#define		USE_LCD
+#define 	USE_IMU
+#define		USE_LCD
 
 /////////////////////////////// INTERVAL TIME ///////////////////////////////////
 #define		TEMP_INTERVAL		1000
@@ -56,11 +54,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-// Typedef BNO08x
-BNO08X_Typedef BNO08x_Data;
-
-// Typedef DHT22
-DHT_Typedef DHT22_Data;
 
 // Typedef Voltage
 Voltage_Current_Typedef Volt_Current_Data;
@@ -76,6 +69,15 @@ com_pc_get_t message_from_pc;
 
 // Typedef Communication Control
 com_ctrl_get_t message_from_ctrl;
+
+// Typedef IMU Control
+BNO055_Typedef BNO055_Data;
+bno055_t bno;
+error_bno err;
+s8 temperature = 0;
+bno055_euler_t eul = {0, 0, 0};
+bno055_vec3_t lia = {0, 0, 0};
+float weight = 0;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -86,9 +88,12 @@ com_ctrl_get_t message_from_ctrl;
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
+I2C_HandleTypeDef hi2c1;
+
 extern SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -98,17 +103,6 @@ DMA_HandleTypeDef hdma_usart2_rx;
 DMA_HandleTypeDef hdma_usart6_rx;
 
 /* USER CODE BEGIN PV */
-// ID LCD
-uint16_t ID = 37697;
-
-// Buffer UART
-char Buffer[50];
-char BufferLast[50];
-
-// Channel Loadcell
-float chA= 0;
-float chB = 0;
-
 // Buffer Sending Data
 uint32_t CurrentTick = 0,
 		 TempTick = 0,
@@ -128,53 +122,20 @@ static void MX_USART2_UART_Init(void);
 static void MX_USART6_UART_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_I2C1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int16_t diff_data_yaw[5];
-uint8_t sample_yaw = 0;
-bool is_calibrated = false;
 uint16_t id_astar= 0;
 ////////////////////////////////////// COMMUNICATION CALLBACK ////////////////////////////////////
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	if (huart == &huart2) {
-
-		// Callback for BNO08X Data
-		#ifdef USE_BNO08X
-	    BNO08X_GetData(&BNO08x_Data);
-	    // Handling Calibration
-	    if(!is_calibrated && BNO08x_Data.yaw != 0){
-	    	if(sample_yaw >= 4){
-	    		// Find Average value
-//	    		double sum_yaw = 0;
-//	    		for(uint8_t i = 0; i < 5; i++){
-//	    			sum_yaw += diff_data_yaw[i];
-//	    		}
-//	    		sum_yaw = sum_yaw/5;
-
-//	    		sum_yaw = diff_data_yaw[4] - diff_data_yaw[0];
-
-	    		// Decision making
-//	    		if(diff_data_yaw[0] <= 100 && diff_data_yaw[0] >= 100){
-	    		if(true){
-	    			is_calibrated = true;
-	    		}
-	    		else{
-	    			// RESET STM
-	    			HAL_NVIC_SystemReset();
-	    		}
-	    	}
-	    	diff_data_yaw[sample_yaw] = BNO08x_Data.yaw;
-	    	sample_yaw++;
-	    }
-    	#endif
-
-	} else if (huart == &huart1) {
+	if (huart == &huart1) {
 	    // Callback for Communicate to PC
 		#ifdef USE_COM_PC
 		rx_pc_get(&message_from_pc);
@@ -190,8 +151,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	}
 }
 
-float data_loadA = 0;
-float data_loadB = 0;
 /* USER CODE END 0 */
 
 /**
@@ -229,18 +188,10 @@ int main(void)
   MX_USART6_UART_Init();
   MX_TIM1_Init();
   MX_SPI1_Init();
+  MX_I2C1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   ////////////////////////////////////// SENSOR INITIALIZATION ////////////////////////////////////
-
-    // BNO08X initialization
-    #ifdef USE_BNO08X
-    BNO08X_Init(&huart2);
-    #endif
-
-    // DHT22 Initialization
-    #ifdef USE_DHT22
-    DHT_Start();
-    #endif
 
     // Volt & Current Initialization
     #ifdef USE_VOLT_CURRENT
@@ -248,11 +199,7 @@ int main(void)
     #endif
 
     // Load cell Initialization
-    #ifdef USE_LOADCELL
-//    hx711_calibration(&Loadcell_Data, GPIOB, GPIO_PIN_0, GPIOB, GPIO_PIN_1);
-    hx711_init(&Loadcell_Data, GPIOB, GPIO_PIN_0, GPIOB, GPIO_PIN_1);
-    set_scale(&Loadcell_Data, 115.598, 72.818);
-    #endif
+    init_loadcell(&htim2);
 
     // Initialize Communication to Control
     #ifdef USE_COM_CONTROL
@@ -266,18 +213,10 @@ int main(void)
     rx_pc_start_get();
     #endif
 
-    // LCD Initialization
-    #ifdef USE_LCD
-    HAL_TIM_Base_Start(&htim1);
-    readID();
-    tft_init(ID);
-    HAL_Delay(1000);
-    fillScreen(BLACK);
-    setRotation(135);
-    #endif
-
-    HAL_Delay(1000);
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+    // IMU Initialization
+	#ifdef USE_IMU
+    bno055_start(&bno,&err,&hi2c1);
+	#endif
 
   /* USER CODE END 2 */
 
@@ -286,15 +225,7 @@ int main(void)
 //    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
   while (1)
   {
-//	  if(id_astar < 20){
-//		  tx_ctrl_send_Astar(message_from_pc,id_astar);
-//		  id_astar++;
-//	  }
-//	  else{
-//		  id_astar = 0;
-//	  }
-//	  data_loadA = get_weight(&Loadcell_Data, 10, CHANNEL_A);
-//	  data_loadB = get_weight(&Loadcell_Data, 10, CHANNEL_B);
+
 	  	  ////////////////////////////////////// ASYNCHRONOUS READING & SENDING ///////////////////////////////////////////
 
 	  CurrentTick = HAL_GetTick();
@@ -302,80 +233,44 @@ int main(void)
 	  if(CurrentTick-SensorTick > SENSOR_INTERVAL){
 
 		  // Reading Data in MX7655 Sensor
-		  Sensor_Data.temperature = (Max6675_Read_Temp()*100);
+//		  Sensor_Data.temperature = (Max6675_Read_Temp()*100);
 
 		  // Reading Data in Voltage Sensor
-		  Get_Voltage_Measurement(&Volt_Current_Data);
-		  Sensor_Data.voltage = (Volt_Current_Data.voltage*100);
+//		  Get_Voltage_Measurement(&Volt_Current_Data);
+//		  Sensor_Data.voltage = (Volt_Current_Data.voltage*100);
 
 		  // Reading Data in Current Sensor
-		  Get_Current_Measurement(&Volt_Current_Data);
-		  Sensor_Data.current = (Volt_Current_Data.current*100);
+//		  Get_Current_Measurement(&Volt_Current_Data);
+//		  Sensor_Data.current = (Volt_Current_Data.current*100);
+
+		  // Reading Data Loadcell
+//	  	  weight = (get_weight_loadcell()/10000);
 
 		  // Sending Sensor Data
-		  tx_pc_send_Sensor(Sensor_Data);
+//		  tx_pc_send_Sensor(Sensor_Data);
 
 		  // Sending Odometry Data
 		  tx_pc_send_Odometry(message_from_ctrl.x_pos,message_from_ctrl.y_pos,message_from_ctrl.t_pos,message_from_ctrl.x_vel,message_from_ctrl.y_vel,message_from_ctrl.t_vel);
 
-
-		  // Sending BNO08X Data
-		  if(is_calibrated) tx_pc_send_BNO08X(BNO08x_Data);
+		  // Sending BNO055 Data
+		  get_euler_imu(&bno,&eul,&lia,&temperature,&BNO055_Data);
+		  tx_pc_send_BNO055(BNO055_Data);
 
 		  SensorTick = CurrentTick;
 	  }
-
-//	  CurrentTick = HAL_GetTick();
-//	  if(CurrentTick-BNO08XTick > BNO08X_INTERVAL){
-//		  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-//
-		  // Sending BNO08X Data
-//		  tx_ctrl_send_BNO08X(BNO08x_Data);//
-//		  BNO08XTick = CurrentTick;
-//	  }
-
-	  ////////////////////////////////////// SENSOR READING ////////////////////////////////////
-
-	  // Reading Data in DHT22 Sensor
-//	  DHT_GetData(&DHT22_Data);
-//	  Sensor_Data.temperature = DHT22_Data.Temperature;
-//	  Sensor_Data.humidity = DHT22_Data.Humidity;
-
-	  // Reading Data in MX7655 Sensor
-//	  Sensor_Data.temperature = (Max6675_Read_Temp()*100);
-
-	  // Reading Data in Voltage Sensor
-//	  Get_Voltage_Measurement(&Volt_Current_Data);
-//	  Sensor_Data.voltage = (Volt_Current_Data.voltage*100);
-
-	  // Reading Data in Current Sensor
-//	  Get_Current_Measurement(&Volt_Current_Data);
-//	  Sensor_Data.current = (Volt_Current_Data.current*100);
-
-	  // Reading Data in Load cell Sensor
-//	  Sensor_Data.loadcell = hx711_measure_weight(Loadcell_Data);
-
-	  ////////////////////////////////////// SENDING DATA TO PC ////////////////////////////////
-
-//	  tx_pc_ping();
-//	   Sending BNO08X Data
-//	  if(is_calibrated) tx_pc_send_BNO08X(BNO08x_Data);
-
-////	   Sending Sensor Data
-//	  tx_pc_send_Sensor(Sensor_Data);
-//
-//	   Sending Sensor Data
-//	  tx_pc_send_Odometry(message_from_ctrl.x_pos,message_from_ctrl.y_pos,message_from_ctrl.t_pos,message_from_ctrl.x_vel,message_from_ctrl.y_vel,message_from_ctrl.t_vel);
-
-
 	  ////////////////////////////////////// SENDING DATA TO CONTROL ///////////////////////////
 
 	  // Sending BNO08X Data
 	  tx_ctrl_send_Astar();
 	  tx_ctrl_send_Command();
-	  //	  tx_ctrl_ping();
-	  if(is_calibrated) tx_ctrl_send_BNO08X(BNO08x_Data);
-//	  HAL_Delay(10);
+
+	  // Sending Data From CTRL To PC
+//	  tx_pc_send_data(message_from_ctrl.data1,message_from_ctrl.data2,message_from_ctrl.data3,message_from_ctrl.data4,message_from_ctrl.data5,message_from_ctrl.data6,message_from_ctrl.data7);
+
+//	   Reading IMU Data
+	  get_euler_imu(&bno,&eul,&lia,&temperature,&BNO055_Data);
+	  tx_ctrl_send_BNO055(BNO055_Data);
+
 
     /* USER CODE END WHILE */
 
@@ -491,6 +386,40 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
   * @brief SPI1 Initialization Function
   * @param None
   * @retval None
@@ -571,6 +500,51 @@ static void MX_TIM1_Init(void)
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 83;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 4294967295;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
 
 }
 
@@ -718,8 +692,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, MX7665_Pin|LED_BLUE_Pin|LED_GREEN_Pin|LED_RED_Pin
-                          |MUL_SCK_Pin|MUL_Latch_Pin|MUL_MOSI_Pin|LCD_CS_Pin
-                          |LCD_RS_Pin|LCD_WR_Pin, GPIO_PIN_RESET);
+                          |MUL_SCK_Pin|MUL_Latch_Pin|MUL_MOSI_Pin|LCD_WR_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_RESET);
@@ -738,11 +711,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(DHT22_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : MX7665_Pin LED_BLUE_Pin LED_GREEN_Pin LED_RED_Pin
-                           MUL_SCK_Pin MUL_Latch_Pin MUL_MOSI_Pin LCD_CS_Pin
-                           LCD_RS_Pin LCD_WR_Pin */
+                           MUL_SCK_Pin MUL_Latch_Pin MUL_MOSI_Pin LCD_WR_Pin */
   GPIO_InitStruct.Pin = MX7665_Pin|LED_BLUE_Pin|LED_GREEN_Pin|LED_RED_Pin
-                          |MUL_SCK_Pin|MUL_Latch_Pin|MUL_MOSI_Pin|LCD_CS_Pin
-                          |LCD_RS_Pin|LCD_WR_Pin;
+                          |MUL_SCK_Pin|MUL_Latch_Pin|MUL_MOSI_Pin|LCD_WR_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
