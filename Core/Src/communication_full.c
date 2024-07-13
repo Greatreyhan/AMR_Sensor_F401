@@ -48,6 +48,45 @@ bool tx_ctrl_send_BNO055(BNO055_Typedef BNO055){
 	else return false;
 }
 
+bool tx_ctrl_task_done(uint16_t step,com_ctrl_get_t* get){
+	uint8_t task_done[] = {0xA5, 0x5A, 0x03, ((step >> 8) & 0XFF), ((step) & 0XFF), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	task_done[18] = checksum_ctrl_generator(task_done, 19);
+
+	for(int i = 0; i < 100; i++){
+		get->astar_coordinate_x[i] = 0;
+		get->astar_coordinate_y[i] = 0;
+	}
+	get->astar_id = 0;
+	get->astar_length = 0;
+	get->astar_total_length = 0;
+	get->astar_msg_id = 0;
+	if(HAL_UART_Transmit(huart_ctrl, task_done, 19, TIMEOUT_SEND) == HAL_OK) return true;
+	else return false;
+}
+//---------------------------------------------------- Send Kinematic Data -----------------------------------------------------------------------------------------//
+bool tx_ctrl_send_Kinematic(uint16_t Sx, uint16_t Sy, uint16_t St, uint16_t T){
+	uint8_t kinematic[] = {0xA5, 0x5A, 0x05, ((Sx >> 8) & 0XFF), ((Sx) & 0XFF), ((Sy >> 8) & 0XFF), ((Sy) & 0XFF), ((St >> 8) & 0XFF), ((St) & 0XFF), ((T >> 8) & 0XFF), ((T) & 0XFF), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	kinematic[18] = checksum_ctrl_generator(kinematic, 19);
+
+	if(HAL_UART_Transmit(huart_ctrl, kinematic, 19, TIMEOUT_SEND) == HAL_OK) return true;
+	else return false;
+}
+//---------------------------------------------------- Send Encoder Data ------------------------------------------------------------------------------------------------//
+bool tx_ctrl_send_Encoder(kinematic_t encoder){
+	uint8_t encoder_data[] = {0xA5, 0x5A, 0x06, (((int16_t)encoder.S1 >> 8) & 0XFF), (((int16_t)encoder.S1) & 0XFF), (((int16_t)encoder.S2 >> 8) & 0XFF), (((int16_t)encoder.S2) & 0XFF), (((int16_t)encoder.V1 >> 8) & 0XFF), (((int16_t)encoder.V1) & 0XFF), (((int16_t)encoder.V2 >> 8) & 0XFF), (((int16_t)encoder.V2) & 0XFF), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	encoder_data[18] = checksum_ctrl_generator(encoder_data, 19);
+
+	if(HAL_UART_Transmit(huart_ctrl, encoder_data, 19, TIMEOUT_SEND) == HAL_OK) return true;
+	else return false;
+}
+
+bool tx_ctrl_send_data(int16_t data1, int16_t data2, int16_t data3, int16_t data4,int16_t data5,int16_t data6,int16_t data7){
+	uint8_t encoder_data[] = {0xA5, 0x5A, 0x55, (((int16_t)data1 >> 8) & 0XFF), (((int16_t)data1) & 0XFF), (((int16_t)data2 >> 8) & 0XFF), (((int16_t)data2) & 0XFF), (((int16_t)data3 >> 8) & 0XFF), (((int16_t)data3) & 0XFF), (((int16_t)data4 >> 8) & 0XFF), (((int16_t)data4) & 0XFF), (((int16_t)data5 >> 8) & 0XFF), (((int16_t)data5) & 0XFF), (((int16_t)data6 >> 8) & 0XFF), (((int16_t)data6) & 0XFF), (((int16_t)data7 >> 8) & 0XFF), (((int16_t)data7) & 0XFF), 0x00};
+	encoder_data[18] = checksum_ctrl_generator(encoder_data, 19);
+
+	if(HAL_UART_Transmit(huart_ctrl, encoder_data, 19, TIMEOUT_SEND) == HAL_OK) return true;
+	else return false;
+}
 bool tx_ctrl_send_Astar(void){
 	for(int i = 0; i <= id_holder; i++){
 		uint8_t tx_data[19];
@@ -64,36 +103,6 @@ bool tx_ctrl_send_Command(void){
 	else return false;
 }
 
-bool tx_ctrl_task_done(uint16_t step){
-	uint8_t task_done[] = {0xA5, 0x5A, 0x03, ((step >> 8) & 0XFF), ((step) & 0XFF), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	task_done[18] = checksum_ctrl_generator(task_done, 19);
-
-	if(HAL_UART_Transmit(huart_ctrl, task_done, 19, TIMEOUT_SEND) == HAL_OK) return true;
-	else return false;
-}
-//---------------------------------------------------- Send Kinematic Data -----------------------------------------------------------------------------------------//
-bool tx_ctrl_send_Kinematic(uint16_t Sx, uint16_t Sy, uint16_t St, uint16_t T){
-	uint8_t kinematic[] = {0xA5, 0x5A, 0x05, ((Sx >> 8) & 0XFF), ((Sx) & 0XFF), ((Sy >> 8) & 0XFF), ((Sy) & 0XFF), ((St >> 8) & 0XFF), ((St) & 0XFF), ((T >> 8) & 0XFF), ((T) & 0XFF), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	kinematic[18] = checksum_pc_generator(kinematic, 19);
-
-	if(HAL_UART_Transmit(huart_ctrl, kinematic, 19, TIMEOUT_SEND) == HAL_OK) return true;
-	else return false;
-}
-//---------------------------------------------------- Send Encoder Data ------------------------------------------------------------------------------------------------//
-bool tx_ctrl_send_Encoder(kinematic_t encoder){
-	uint8_t encoder_data[] = {0xA5, 0x5A, 0x06, (((int16_t)encoder.S3 >> 8) & 0XFF), (((int16_t)encoder.S3) & 0XFF), (((int16_t)encoder.S4 >> 8) & 0XFF), (((int16_t)encoder.S4) & 0XFF), (((int16_t)encoder.V3 >> 8) & 0XFF), (((int16_t)encoder.V3) & 0XFF), (((int16_t)encoder.V4 >> 8) & 0XFF), (((int16_t)encoder.V4) & 0XFF), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	encoder_data[18] = checksum_pc_generator(encoder_data, 19);
-
-	if(HAL_UART_Transmit(huart_ctrl, encoder_data, 19, TIMEOUT_SEND) == HAL_OK) return true;
-	else return false;
-}
-bool tx_ctrl_send_data(int16_t data1, int16_t data2, int16_t data3, int16_t data4,int16_t data5,int16_t data6,int16_t data7){
-	uint8_t encoder_data[] = {0xA5, 0x5A, 0x55, (((int16_t)data1 >> 8) & 0XFF), (((int16_t)data1) & 0XFF), (((int16_t)data2 >> 8) & 0XFF), (((int16_t)data2) & 0XFF), (((int16_t)data3 >> 8) & 0XFF), (((int16_t)data3) & 0XFF), (((int16_t)data4 >> 8) & 0XFF), (((int16_t)data4) & 0XFF), (((int16_t)data5 >> 8) & 0XFF), (((int16_t)data5) & 0XFF), (((int16_t)data6 >> 8) & 0XFF), (((int16_t)data6) & 0XFF), (((int16_t)data7 >> 8) & 0XFF), (((int16_t)data7) & 0XFF), 0x00};
-	encoder_data[18] = checksum_ctrl_generator(encoder_data, 19);
-
-	if(HAL_UART_Transmit(huart_ctrl, encoder_data, 19, TIMEOUT_SEND) == HAL_OK) return true;
-	else return false;
-}
 bool tx_ctrl_forwading(uint8_t* msg){
 	if(HAL_UART_Transmit(huart_ctrl, msg, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
@@ -105,6 +114,7 @@ bool tx_ctrl_send_Odometry(int16_t Sx, int16_t Sy, int16_t St, int16_t Vx, int16
 	if(HAL_UART_Transmit(huart_ctrl, odom_data, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
 }
+
 
 void rx_ctrl_start_get(void){
 	HAL_UART_Receive_DMA(huart_ctrl,rxbuf_get_ctrl, 19);
@@ -270,6 +280,11 @@ void rx_ctrl_get(com_ctrl_get_t* get){
 			else if(rxbuf_get_ctrl[2] == 0x13){
 				uint8_t chk = checksum_ctrl_generator(rxbuf_get_ctrl,18);
 				if(chk == rxbuf_get_ctrl[18]){
+				// Menghapus sisa koordinat
+				for (int i = (rxbuf_get_ctrl[4]*5); i < 100-(rxbuf_get_ctrl[4]*5); i++) {
+					get->astar_coordinate_x[i] = 0;
+					get->astar_coordinate_y[i] = 0;
+				}
 				get->astar_id = (rxbuf_get_ctrl[3]);
 				get->astar_length = (rxbuf_get_ctrl[4]);
 				get->astar_coordinate_x[rxbuf_get_ctrl[3]*5+0] = (rxbuf_get_ctrl[5]);
@@ -315,7 +330,7 @@ bool tx_pc_ping(void){
 //---------------------------------------------------- Send Roll Pitch & Yaw from BNO08X Sensor -------------------------------------------------------------------------//
 bool tx_pc_send_BNO055(BNO055_Typedef BNO055){
 	uint8_t BNO[] = {0xA5, 0x5A, 0x02, ((BNO055.yaw >> 8) & 0XFF), ((BNO055.yaw) & 0XFF), ((BNO055.pitch >> 8) & 0XFF), ((BNO055.pitch) & 0XFF), ((BNO055.roll >> 8) & 0XFF), ((BNO055.roll) & 0XFF), ((BNO055.x_acceleration >> 8) & 0XFF), ((BNO055.x_acceleration) & 0XFF), ((BNO055.y_acceleration >> 8) & 0XFF), ((BNO055.y_acceleration) & 0XFF), ((BNO055.z_acceleration >> 8) & 0XFF), ((BNO055.z_acceleration) & 0XFF), ((BNO055.temperature >> 8) & 0XFF), ((BNO055.temperature) & 0XFF), 0x00, 0x00};
-	BNO[18] = checksum_ctrl_generator(BNO, 19);
+	BNO[18] = checksum_pc_generator(BNO, 19);
 
 	if(HAL_UART_Transmit(huart_pc, BNO, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
@@ -324,7 +339,7 @@ bool tx_pc_send_BNO055(BNO055_Typedef BNO055){
 
 bool tx_pc_task_done(uint16_t step){
 	uint8_t task_done[] = {0xA5, 0x5A, 0x03, ((step >> 8) & 0XFF), ((step) & 0XFF), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	task_done[18] = checksum_ctrl_generator(task_done, 19);
+	task_done[18] = checksum_pc_generator(task_done, 19);
 
 	if(HAL_UART_Transmit(huart_pc, task_done, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
@@ -365,7 +380,7 @@ bool tx_pc_send_Odometry(int16_t Sx, int16_t Sy, int16_t St, int16_t Vx, int16_t
 
 bool tx_pc_send_data(int16_t data1, int16_t data2, int16_t data3, int16_t data4,int16_t data5,int16_t data6,int16_t data7){
 	uint8_t encoder_data[] = {0xA5, 0x5A, 0x55, (((int16_t)data1 >> 8) & 0XFF), (((int16_t)data1) & 0XFF), (((int16_t)data2 >> 8) & 0XFF), (((int16_t)data2) & 0XFF), (((int16_t)data3 >> 8) & 0XFF), (((int16_t)data3) & 0XFF), (((int16_t)data4 >> 8) & 0XFF), (((int16_t)data4) & 0XFF), (((int16_t)data5 >> 8) & 0XFF), (((int16_t)data5) & 0XFF), (((int16_t)data6 >> 8) & 0XFF), (((int16_t)data6) & 0XFF), (((int16_t)data7 >> 8) & 0XFF), (((int16_t)data7) & 0XFF), 0x00};
-	encoder_data[18] = checksum_ctrl_generator(encoder_data, 19);
+	encoder_data[18] = checksum_pc_generator(encoder_data, 19);
 
 	if(HAL_UART_Transmit(huart_pc, encoder_data, 19, TIMEOUT_SEND) == HAL_OK) return true;
 	else return false;
@@ -386,11 +401,8 @@ void rx_pc_get(com_pc_get_t* get){
 
 			// Check for Task Done
 			if(rxbuf_get_pc[2] == 0x03){
-				if((rxbuf_get_pc[i+3] & 0x80)) get->step = ((rxbuf_get_pc[i+3] << 8) | rxbuf_get_pc[i+4])-(65536);
-				else get->step = (rxbuf_get_pc[i+3] << 8) | rxbuf_get_pc[i+4];
-
 				if((rxbuf_get_ctrl[3] & 0x80)) get->step = ((rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4])-(65536);
-					else get->step = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
+				else get->step = (rxbuf_get_ctrl[3] << 8) | rxbuf_get_ctrl[4];
 
 					for(int i = 0; i <= id_holder; i++){
 						for(int j = 0; j < 19;j++){
@@ -465,7 +477,7 @@ void rx_pc_get(com_pc_get_t* get){
 
 			}
 
-			// Check for Data Odometry
+			// Check for Data Send
 			else if(rxbuf_get_pc[i+2] == 0x55){
 
 				if((rxbuf_get_pc[i+3] & 0x80)) get->data1 = ((rxbuf_get_pc[i+3] << 8) | rxbuf_get_pc[i+4])-(65536);

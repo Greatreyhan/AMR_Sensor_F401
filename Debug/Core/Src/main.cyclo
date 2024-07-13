@@ -1,5 +1,5 @@
-../Core/Src/main.c:136:6:HAL_UART_RxCpltCallback	3
-../Core/Src/main.c:160:5:main	2
+../Core/Src/main.c:134:6:HAL_UART_RxCpltCallback	3
+../Core/Src/main.c:158:5:main	2
 ../Core/Src/main.c:286:6:SystemClock_Config	3
 ../Core/Src/main.c:333:13:MX_ADC1_Init	2
 ../Core/Src/main.c:393:13:MX_I2C1_Init	2

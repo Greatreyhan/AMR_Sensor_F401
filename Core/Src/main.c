@@ -21,8 +21,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include 	"BNO08X.h"
-#include 	"DHT22.h"
 #include 	"Voltage_Current.h"
 #include 	"HX711.h"
 #include 	"MAX6675.h"
@@ -232,28 +230,28 @@ int main(void)
 
 	  if(CurrentTick-SensorTick > SENSOR_INTERVAL){
 
-		  // Reading Data in MX7655 Sensor
+//		   Reading Data in MX7655 Sensor
 //		  Sensor_Data.temperature = (Max6675_Read_Temp()*100);
-
-		  // Reading Data in Voltage Sensor
+//
+//		   Reading Data in Voltage Sensor
 //		  Get_Voltage_Measurement(&Volt_Current_Data);
 //		  Sensor_Data.voltage = (Volt_Current_Data.voltage*100);
-
-		  // Reading Data in Current Sensor
+//
+//		   Reading Data in Current Sensor
 //		  Get_Current_Measurement(&Volt_Current_Data);
 //		  Sensor_Data.current = (Volt_Current_Data.current*100);
-
-		  // Reading Data Loadcell
+//
+//		   Reading Data Loadcell
 //	  	  weight = (get_weight_loadcell()/10000);
-
-		  // Sending Sensor Data
+//
+//		   Sending Sensor Data
 //		  tx_pc_send_Sensor(Sensor_Data);
 
-		  // Sending Odometry Data
+//		   Sending Odometry Data
 		  tx_pc_send_Odometry(message_from_ctrl.x_pos,message_from_ctrl.y_pos,message_from_ctrl.t_pos,message_from_ctrl.x_vel,message_from_ctrl.y_vel,message_from_ctrl.t_vel);
 
-		  // Sending BNO055 Data
-		  get_euler_imu(&bno,&eul,&lia,&temperature,&BNO055_Data);
+//		   Sending BNO055 Data
+//		  get_euler_imu(&bno,&eul,&lia,&temperature,&BNO055_Data);
 		  tx_pc_send_BNO055(BNO055_Data);
 
 		  SensorTick = CurrentTick;
@@ -269,7 +267,9 @@ int main(void)
 
 //	   Reading IMU Data
 	  get_euler_imu(&bno,&eul,&lia,&temperature,&BNO055_Data);
+//	  tx_pc_send_Odometry(message_from_ctrl.x_pos,message_from_ctrl.y_pos,message_from_ctrl.t_pos,message_from_ctrl.x_vel,message_from_ctrl.y_vel,message_from_ctrl.t_vel);
 	  tx_ctrl_send_BNO055(BNO055_Data);
+//	  tx_pc_send_BNO055(BNO055_Data);
 
 
     /* USER CODE END WHILE */

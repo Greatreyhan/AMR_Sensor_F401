@@ -167,7 +167,7 @@ void komunikasi_ctrl_init(UART_HandleTypeDef* uart_handler);
 uint8_t checksum_ctrl_generator(uint8_t* arr, uint8_t size);
 bool tx_ctrl_ping(void);
 bool tx_ctrl_send_BNO055(BNO055_Typedef BNO055);
-bool tx_ctrl_task_done(uint16_t step);
+bool tx_ctrl_task_done(uint16_t step,com_ctrl_get_t* get);
 bool tx_ctrl_forwading(uint8_t* msg);
 bool tx_ctrl_send_Astar(void);
 bool tx_ctrl_send_Command(void);
