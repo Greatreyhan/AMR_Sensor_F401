@@ -228,7 +228,7 @@ int main(void)
 
 	  CurrentTick = HAL_GetTick();
 
-	  if(CurrentTick-SensorTick > SENSOR_INTERVAL){
+	  if(CurrentTick-SensorTick > 300){
 
 //		   Reading Data in MX7655 Sensor
 //		  Sensor_Data.temperature = (Max6675_Read_Temp()*100);

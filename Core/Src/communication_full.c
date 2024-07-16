@@ -18,7 +18,7 @@ static uint8_t rxbuf_get_pc[19];
 static UART_HandleTypeDef* huart_ctrl;
 static uint8_t rxbuf_get_ctrl[19];
 static uint8_t rx_buf_command[19];
-static uint8_t rx_buf_holder[100];
+static uint8_t rx_buf_holder[300];
 static uint8_t id_holder = 0;
 //******************************************** COMMUNICATION TO CONTROL **********************************************//
 
